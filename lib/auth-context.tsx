@@ -12,11 +12,13 @@ export interface User {
   age?: number
   height?: number
   weight?: number
+  gender?: string
 }
 
 interface AuthContextType {
   user: User | null
   isLoggedIn: boolean
+  isLoading: boolean
   login: (email: string, password: string) => Promise<boolean>
   register: (name: string, email: string, phone: string, password: string) => Promise<boolean>
   logout: () => void
@@ -27,11 +29,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         fetchUserProfile(session.user)
+      } else {
+        setIsLoading(false)
       }
     })
 
@@ -40,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fetchUserProfile(session.user)
       } else {
         setUser(null)
+        setIsLoading(false)
       }
     })
 
@@ -53,9 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq('id', supabaseUser.id)
       .single()
 
-    if (data) {
-      setUser(data)
-    }
+    if (data) setUser(data)
+    setIsLoading(false)
   }
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -63,7 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return !error
   }
 
-  const register = async (name: string, email: string, phone: string, password: string): Promise<boolean> => {
+  const register = async (
+    name: string,
+    email: string,
+    phone: string,
+    password: string
+  ): Promise<boolean> => {
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error || !data.user) return false
 
@@ -86,7 +96,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, register, logout, updateUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoggedIn: !!user,
+        isLoading,
+        login,
+        register,
+        logout,
+        updateUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

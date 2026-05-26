@@ -10,43 +10,26 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MainLayout } from '@/components/main-layout'
 import { Providers } from '@/components/providers'
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Calendar,
-  Ruler,
-  Weight,
-  Save,
-  Pencil,
-  X,
-  History,
-  Bell,
-  ArrowRight,
-  CheckCircle
+import {
+  User, Mail, Phone, Calendar, Ruler, Weight,
+  Save, Pencil, X, History, Bell, ArrowRight, CheckCircle, Venus
 } from 'lucide-react'
 
 function ProfileContent() {
   const router = useRouter()
-  const { user, isLoggedIn, updateUser } = useAuth()
-  
+  const { user, isLoggedIn, isLoading, updateUser } = useAuth()
+
   const [isEditing, setIsEditing] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    age: '',
-    height: '',
-    weight: '',
+    name: '', email: '', phone: '', age: '', height: '', weight: '', gender: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      router.push('/login')
-    }
-  }, [isLoggedIn, router])
+    if (isLoading) return
+    if (!isLoggedIn) router.push('/login')
+  }, [isLoggedIn, isLoading, router])
 
   useEffect(() => {
     if (user) {
@@ -57,39 +40,29 @@ function ProfileContent() {
         age: user.age?.toString() || '',
         height: user.height?.toString() || '',
         weight: user.weight?.toString() || '',
+        gender: user.gender || '',
       })
     }
   }, [user])
 
-  if (!isLoggedIn || !user) {
-    return null
-  }
+  if (isLoading || !isLoggedIn || !user) return null
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Nama wajib diisi'
-    }
-
+    if (!formData.name.trim()) newErrors.name = 'Nama wajib diisi'
     if (!formData.email.trim()) {
       newErrors.email = 'Email wajib diisi'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Format email tidak valid'
     }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Nomor telepon wajib diisi'
-    }
-
+    if (!formData.phone.trim()) newErrors.phone = 'Nomor telepon wajib diisi'
     if (formData.age && (isNaN(Number(formData.age)) || Number(formData.age) < 1 || Number(formData.age) > 120)) {
       newErrors.age = 'Usia harus antara 1-120 tahun'
     }
-
     if (formData.height && (isNaN(Number(formData.height)) || Number(formData.height) < 50 || Number(formData.height) > 250)) {
       newErrors.height = 'Tinggi badan harus antara 50-250 cm'
     }
-
     if (formData.weight && (isNaN(Number(formData.weight)) || Number(formData.weight) < 20 || Number(formData.weight) > 300)) {
       newErrors.weight = 'Berat badan harus antara 20-300 kg'
     }
@@ -100,7 +73,6 @@ function ProfileContent() {
 
   const handleSave = () => {
     if (!validateForm()) return
-
     updateUser({
       name: formData.name,
       email: formData.email,
@@ -108,8 +80,8 @@ function ProfileContent() {
       age: formData.age ? Number(formData.age) : undefined,
       height: formData.height ? Number(formData.height) : undefined,
       weight: formData.weight ? Number(formData.weight) : undefined,
+      gender: formData.gender || undefined,
     })
-
     setIsEditing(false)
     setIsSaved(true)
     setTimeout(() => setIsSaved(false), 3000)
@@ -123,6 +95,7 @@ function ProfileContent() {
       age: user.age?.toString() || '',
       height: user.height?.toString() || '',
       weight: user.weight?.toString() || '',
+      gender: user.gender || '',
     })
     setIsEditing(false)
     setErrors({})
@@ -131,8 +104,7 @@ function ProfileContent() {
   const calculateBMI = () => {
     if (user.weight && user.height) {
       const heightM = user.height / 100
-      const bmi = user.weight / (heightM * heightM)
-      return bmi.toFixed(1)
+      return (user.weight / (heightM * heightM)).toFixed(1)
     }
     return null
   }
@@ -144,6 +116,12 @@ function ProfileContent() {
     return { label: 'Obesitas', color: 'text-red-600' }
   }
 
+  const getGenderLabel = (value: string) => {
+    if (value === 'male') return 'Laki-laki'
+    if (value === 'female') return 'Perempuan'
+    return '-'
+  }
+
   const bmi = calculateBMI()
   const bmiCategory = bmi ? getBMICategory(Number(bmi)) : null
 
@@ -151,17 +129,11 @@ function ProfileContent() {
     <MainLayout>
       <div className="container mx-auto px-4 py-16 md:py-24">
         <div className="mx-auto max-w-2xl">
-          {/* Header */}
           <div className="mb-8">
-            <h1 className="font-serif text-3xl font-bold text-foreground md:text-4xl">
-              Profile Saya
-            </h1>
-            <p className="mt-2 text-muted-foreground">
-              Kelola informasi akun dan data kesehatan Anda
-            </p>
+            <h1 className="font-serif text-3xl font-bold text-foreground md:text-4xl">Profile Saya</h1>
+            <p className="mt-2 text-muted-foreground">Kelola informasi akun dan data kesehatan Anda</p>
           </div>
 
-          {/* Saved Notification */}
           {isSaved && (
             <div className="mb-6 flex items-center gap-2 rounded-lg bg-green-50 p-4 text-green-700 border border-green-200">
               <CheckCircle className="h-5 w-5" />
@@ -169,7 +141,6 @@ function ProfileContent() {
             </div>
           )}
 
-          {/* Profile Card */}
           <Card className="mb-8">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -178,9 +149,7 @@ function ProfileContent() {
                     <User className="h-5 w-5 text-primary" />
                     Informasi Profil
                   </CardTitle>
-                  <CardDescription>
-                    Data identitas dan kesehatan Anda
-                  </CardDescription>
+                  <CardDescription>Data identitas dan kesehatan Anda</CardDescription>
                 </div>
                 {!isEditing && (
                   <Button variant="outline" onClick={() => setIsEditing(true)} className="font-mono">
@@ -193,188 +162,83 @@ function ProfileContent() {
             <CardContent>
               {isEditing ? (
                 <div className="space-y-6">
-                  {/* Name */}
+                  {[
+                    { id: 'name', label: 'Nama Lengkap', icon: User, type: 'text' },
+                    { id: 'email', label: 'Email', icon: Mail, type: 'email' },
+                    { id: 'phone', label: 'Nomor Telepon', icon: Phone, type: 'tel' },
+                    { id: 'age', label: 'Usia (tahun)', icon: Calendar, type: 'number', placeholder: 'Masukkan usia' },
+                    { id: 'height', label: 'Tinggi Badan (cm)', icon: Ruler, type: 'number', placeholder: 'Masukkan tinggi badan' },
+                    { id: 'weight', label: 'Berat Badan (kg)', icon: Weight, type: 'number', placeholder: 'Masukkan berat badan' },
+                  ].map(({ id, label, icon: Icon, type, placeholder }) => (
+                    <div key={id} className="space-y-2">
+                      <Label htmlFor={id} className="flex items-center gap-2">
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        {label}
+                      </Label>
+                      <Input
+                        id={id}
+                        type={type}
+                        placeholder={placeholder}
+                        value={formData[id as keyof typeof formData]}
+                        onChange={(e) => setFormData({ ...formData, [id]: e.target.value })}
+                        className={errors[id] ? 'border-destructive' : ''}
+                      />
+                      {errors[id] && <p className="text-sm text-destructive">{errors[id]}</p>}
+                    </div>
+                  ))}
+
+                  {/* Gender field */}
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      Nama Lengkap
+                    <Label htmlFor="gender" className="flex items-center gap-2">
+                      <Venus className="h-4 w-4 text-muted-foreground" />
+                      Jenis Kelamin
                     </Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className={errors.name ? 'border-destructive' : ''}
-                    />
-                    {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+                    <select
+                      id="gender"
+                      value={formData.gender}
+                      onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Pilih jenis kelamin</option>
+                      <option value="male">Laki-laki</option>
+                      <option value="female">Perempuan</option>
+                    </select>
+                    {errors.gender && <p className="text-sm text-destructive">{errors.gender}</p>}
                   </div>
 
-                  {/* Email */}
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      Email
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className={errors.email ? 'border-destructive' : ''}
-                    />
-                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-                  </div>
-
-                  {/* Phone */}
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      Nomor Telepon
-                    </Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className={errors.phone ? 'border-destructive' : ''}
-                    />
-                    {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
-                  </div>
-
-                  {/* Age */}
-                  <div className="space-y-2">
-                    <Label htmlFor="age" className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      Usia (tahun)
-                    </Label>
-                    <Input
-                      id="age"
-                      type="number"
-                      placeholder="Masukkan usia"
-                      value={formData.age}
-                      onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                      className={errors.age ? 'border-destructive' : ''}
-                    />
-                    {errors.age && <p className="text-sm text-destructive">{errors.age}</p>}
-                  </div>
-
-                  {/* Height */}
-                  <div className="space-y-2">
-                    <Label htmlFor="height" className="flex items-center gap-2">
-                      <Ruler className="h-4 w-4 text-muted-foreground" />
-                      Tinggi Badan (cm)
-                    </Label>
-                    <Input
-                      id="height"
-                      type="number"
-                      placeholder="Masukkan tinggi badan"
-                      value={formData.height}
-                      onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                      className={errors.height ? 'border-destructive' : ''}
-                    />
-                    {errors.height && <p className="text-sm text-destructive">{errors.height}</p>}
-                  </div>
-
-                  {/* Weight */}
-                  <div className="space-y-2">
-                    <Label htmlFor="weight" className="flex items-center gap-2">
-                      <Weight className="h-4 w-4 text-muted-foreground" />
-                      Berat Badan (kg)
-                    </Label>
-                    <Input
-                      id="weight"
-                      type="number"
-                      placeholder="Masukkan berat badan"
-                      value={formData.weight}
-                      onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                      className={errors.weight ? 'border-destructive' : ''}
-                    />
-                    {errors.weight && <p className="text-sm text-destructive">{errors.weight}</p>}
-                  </div>
-
-                  {/* Action Buttons */}
                   <div className="flex gap-2 pt-4">
                     <Button onClick={handleSave} className="font-mono">
-                      <Save className="mr-2 h-4 w-4" />
-                      Simpan
+                      <Save className="mr-2 h-4 w-4" />Simpan
                     </Button>
                     <Button variant="outline" onClick={handleCancel} className="font-mono">
-                      <X className="mr-2 h-4 w-4" />
-                      Batal
+                      <X className="mr-2 h-4 w-4" />Batal
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Display Data */}
                   <div className="grid gap-6 md:grid-cols-2">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <User className="h-5 w-5 text-primary" />
+                    {[
+                      { icon: User, label: 'Nama Lengkap', value: user.name },
+                      { icon: Mail, label: 'Email', value: user.email },
+                      { icon: Phone, label: 'Nomor Telepon', value: user.phone },
+                      { icon: Venus, label: 'Jenis Kelamin', value: getGenderLabel(user.gender || '') },
+                      { icon: Calendar, label: 'Usia', value: user.age ? `${user.age} tahun` : '-' },
+                      { icon: Ruler, label: 'Tinggi Badan', value: user.height ? `${user.height} cm` : '-' },
+                      { icon: Weight, label: 'Berat Badan', value: user.weight ? `${user.weight} kg` : '-' },
+                    ].map(({ icon: Icon, label, value }) => (
+                      <div key={label} className="flex items-start gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                          <Icon className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">{label}</p>
+                          <p className="font-medium text-foreground">{value}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Nama Lengkap</p>
-                        <p className="font-medium text-foreground">{user.name}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <Mail className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Email</p>
-                        <p className="font-medium text-foreground">{user.email}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <Phone className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Nomor Telepon</p>
-                        <p className="font-medium text-foreground">{user.phone}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <Calendar className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Usia</p>
-                        <p className="font-medium text-foreground">
-                          {user.age ? `${user.age} tahun` : '-'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <Ruler className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Tinggi Badan</p>
-                        <p className="font-medium text-foreground">
-                          {user.height ? `${user.height} cm` : '-'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <Weight className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Berat Badan</p>
-                        <p className="font-medium text-foreground">
-                          {user.weight ? `${user.weight} kg` : '-'}
-                        </p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
 
-                  {/* BMI Card */}
                   {bmi && bmiCategory && (
                     <div className="p-4 rounded-lg bg-muted/50 border border-border">
                       <div className="flex items-center justify-between">
@@ -393,41 +257,28 @@ function ProfileContent() {
             </CardContent>
           </Card>
 
-          {/* Quick Links */}
           <div className="grid gap-4 md:grid-cols-2">
-            <Link href="/history">
-              <Card className="cursor-pointer hover:border-primary hover:shadow-lg transition-all">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                      <History className="h-6 w-6 text-primary" />
+            {[
+              { href: '/history', icon: History, title: 'Riwayat Skrining', desc: 'Lihat hasil skrining sebelumnya' },
+              { href: '/reminder', icon: Bell, title: 'Reminder', desc: 'Kelola pengingat skrining' },
+            ].map(({ href, icon: Icon, title, desc }) => (
+              <Link key={href} href={href}>
+                <Card className="cursor-pointer hover:border-primary hover:shadow-lg transition-all">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                        <Icon className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-medium text-foreground">{title}</h3>
+                        <p className="text-sm text-muted-foreground">{desc}</p>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-foreground">Riwayat Skrining</h3>
-                      <p className="text-sm text-muted-foreground">Lihat hasil skrining sebelumnya</p>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/reminder">
-              <Card className="cursor-pointer hover:border-primary hover:shadow-lg transition-all">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                      <Bell className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-foreground">Reminder</h3>
-                      <p className="text-sm text-muted-foreground">Kelola pengingat skrining</p>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
           </div>
         </div>
       </div>

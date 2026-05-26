@@ -29,73 +29,53 @@ import {
 
 function HistoryContent() {
   const router = useRouter()
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, isLoading } = useAuth()
   const { results } = useScreening()
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      router.push('/login')
-    }
-  }, [isLoggedIn, router])
+    if (isLoading) return
+    if (!isLoggedIn) router.push('/login')
+  }, [isLoggedIn, isLoading, router])
 
-  if (!isLoggedIn) {
-    return null
-  }
+  if (isLoading || !isLoggedIn) return null
 
   const getRiskIcon = (level: string) => {
     switch (level) {
-      case 'low':
-        return <CheckCircle className="h-5 w-5 text-green-600" />
-      case 'medium':
-        return <AlertCircle className="h-5 w-5 text-yellow-600" />
-      case 'high':
-        return <AlertTriangle className="h-5 w-5 text-red-600" />
-      default:
-        return null
+      case 'low': return <CheckCircle className="h-5 w-5 text-green-600" />
+      case 'medium': return <AlertCircle className="h-5 w-5 text-yellow-600" />
+      case 'high': return <AlertTriangle className="h-5 w-5 text-red-600" />
+      default: return null
     }
   }
 
   const getRiskLabel = (level: string) => {
     switch (level) {
-      case 'low':
-        return 'Rendah'
-      case 'medium':
-        return 'Sedang'
-      case 'high':
-        return 'Tinggi'
-      default:
-        return level
+      case 'low': return 'Rendah'
+      case 'medium': return 'Sedang'
+      case 'high': return 'Tinggi'
+      default: return level
     }
   }
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case 'low':
-        return 'text-green-600 bg-green-50'
-      case 'medium':
-        return 'text-yellow-600 bg-yellow-50'
-      case 'high':
-        return 'text-red-600 bg-red-50'
-      default:
-        return ''
+      case 'low': return 'text-green-600 bg-green-50'
+      case 'medium': return 'text-yellow-600 bg-yellow-50'
+      case 'high': return 'text-red-600 bg-red-50'
+      default: return ''
     }
   }
 
-  // Prepare chart data
   const chartData = results
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map((result) => ({
       date: new Date(result.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
       score: result.score,
       fullDate: new Date(result.date).toLocaleDateString('id-ID', { 
-        weekday: 'short',
-        day: 'numeric', 
-        month: 'short',
-        year: 'numeric'
+        weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
       }),
     }))
 
-  // Sort results by date (newest first) for the list
   const sortedResults = [...results].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   )
@@ -131,7 +111,6 @@ function HistoryContent() {
     <MainLayout>
       <div className="container mx-auto px-4 py-16 md:py-24">
         <div className="mx-auto max-w-4xl">
-          {/* Header */}
           <div className="mb-8">
             <h1 className="font-serif text-3xl font-bold text-foreground md:text-4xl">
               Riwayat Skrining
@@ -141,7 +120,6 @@ function HistoryContent() {
             </p>
           </div>
 
-          {/* Trend Chart */}
           {chartData.length > 1 && (
             <Card className="mb-8">
               <CardHeader>
@@ -149,28 +127,16 @@ function HistoryContent() {
                   <History className="h-5 w-5 text-primary" />
                   Tren Risiko
                 </CardTitle>
-                <CardDescription>
-                  Perubahan skor risiko diabetes Anda
-                </CardDescription>
+                <CardDescription>Perubahan skor risiko diabetes Anda</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.02 200)" />
-                      <XAxis 
-                        dataKey="date" 
-                        stroke="oklch(0.5 0.02 200)" 
-                        fontSize={12}
-                        tickMargin={10}
-                      />
-                      <YAxis 
-                        stroke="oklch(0.5 0.02 200)" 
-                        fontSize={12}
-                        domain={[0, 100]}
-                        tickMargin={10}
-                      />
-                      <Tooltip 
+                      <XAxis dataKey="date" stroke="oklch(0.5 0.02 200)" fontSize={12} tickMargin={10} />
+                      <YAxis stroke="oklch(0.5 0.02 200)" fontSize={12} domain={[0, 100]} tickMargin={10} />
+                      <Tooltip
                         contentStyle={{ 
                           backgroundColor: 'oklch(1 0 0)', 
                           border: '1px solid oklch(0.9 0.02 200)',
@@ -181,10 +147,7 @@ function HistoryContent() {
                         formatter={(value: number) => [`Skor: ${value}`, '']}
                       />
                       <Line 
-                        type="monotone" 
-                        dataKey="score" 
-                        stroke="oklch(0.55 0.15 180)" 
-                        strokeWidth={3}
+                        type="monotone" dataKey="score" stroke="oklch(0.55 0.15 180)" strokeWidth={3}
                         dot={{ fill: 'oklch(0.55 0.15 180)', strokeWidth: 2, r: 5 }}
                         activeDot={{ r: 8 }}
                       />
@@ -209,15 +172,10 @@ function HistoryContent() {
             </Card>
           )}
 
-          {/* Results List */}
           <Card>
             <CardHeader>
-              <CardTitle className="font-serif text-xl">
-                Daftar Hasil Skrining
-              </CardTitle>
-              <CardDescription>
-                {results.length} hasil skrining tercatat
-              </CardDescription>
+              <CardTitle className="font-serif text-xl">Daftar Hasil Skrining</CardTitle>
+              <CardDescription>{results.length} hasil skrining tercatat</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -231,10 +189,7 @@ function HistoryContent() {
                       <div>
                         <div className="font-medium text-foreground">
                           {new Date(result.date).toLocaleDateString('id-ID', {
-                            weekday: 'long',
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
+                            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
                           })}
                         </div>
                         <div className="text-sm text-muted-foreground">
@@ -257,7 +212,6 @@ function HistoryContent() {
             </CardContent>
           </Card>
 
-          {/* Action Button */}
           <div className="mt-8 text-center">
             <Link href="/screening">
               <Button className="font-mono">
