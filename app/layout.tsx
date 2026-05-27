@@ -31,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="id" className={`${poppins.variable} ${inter.variable} ${plusJakartaSans.variable} bg-background`}>
+    <html lang="id" suppressHydrationWarning className={`${poppins.variable} ${inter.variable} ${plusJakartaSans.variable} bg-background`}>
       <body className="font-sans antialiased min-h-screen">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}

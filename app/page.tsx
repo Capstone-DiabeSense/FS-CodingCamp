@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { MainLayout } from '@/components/main-layout'
 import { Providers } from '@/components/providers'
 import { useAuth } from '@/lib/auth-context'
+import { useTranslation } from 'react-i18next'
 import { 
   Activity, 
   Shield, 
@@ -59,6 +60,7 @@ const riskDistribution = [
 
 function DashboardContent() {
   const { isLoggedIn } = useAuth()
+  const { t } = useTranslation()
 
   const features = [
     {
@@ -101,23 +103,22 @@ function DashboardContent() {
           <div className="mx-auto max-w-3xl text-center">
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary mb-6">
               <Activity className="h-4 w-4" />
-              <span className="font-mono">Platform Skrining Diabetes Terpercaya</span>
+              <span className="font-mono">{t('hero_badge')}</span>
             </div>
             
             <h1 className="font-serif text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl text-balance">
-              Kenali Risiko Diabetes Anda Lebih Awal dengan{' '}
+              {t('hero_title_1')}{' '}
               <span className="text-primary">DiabeSense</span>
             </h1>
             
             <p className="mt-6 text-lg text-muted-foreground leading-relaxed md:text-xl">
-              Deteksi dini adalah kunci pencegahan. Lakukan skrining risiko diabetes secara mandiri, 
-              cepat, dan akurat dari mana saja.
+              {t('hero_subtitle')}
             </p>
             
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Link href="/screening">
                 <Button size="lg" className="font-mono gap-2 w-full sm:w-auto">
-                  Coba Skrining Sekarang
+                  {t('hero_btn_1')}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
@@ -127,7 +128,7 @@ function DashboardContent() {
                 rel="noopener noreferrer"
               >
                 <Button variant="outline" size="lg" className="font-mono gap-2 w-full sm:w-auto">
-                  Lihat Dashboard Analitik
+                  {t('hero_btn_2')}
                   <ExternalLink className="h-4 w-4" />
                 </Button>
               </a>
