@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useScreening } from '@/lib/screening-context'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { MainLayout } from '@/components/main-layout'
 import { Providers } from '@/components/providers'
 import { ClipboardList, ClipboardCheck, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react'
+import { useAuth } from '@/lib/auth-context'
 
 type ScreeningType = 'basic' | 'comprehensive' | null
 
@@ -31,30 +32,41 @@ interface FormData {
   waistCircumference?: string
 }
 
-const initialFormData: FormData = {
-  age: '',
-  gender: '',
-  weight: '',
-  height: '',
-  familyHistory: '',
-  physicalActivity: '',
-  diet: '',
-  smoking: '',
-  bloodPressure: '',
-  fastingGlucose: '',
-  hba1c: '',
-  cholesterol: '',
-  waistCircumference: '',
-}
-
 function ScreeningContent() {
   const router = useRouter()
   const { addResult } = useScreening()
+  const { user } = useAuth()
   const [screeningType, setScreeningType] = useState<ScreeningType>(null)
   const [currentStep, setCurrentStep] = useState(0)
-  const [formData, setFormData] = useState<FormData>(initialFormData)
+  const [formData, setFormData] = useState<FormData>({
+    age: user?.age?.toString() || '',
+    gender: user?.gender || '',
+    weight: user?.weight?.toString() || '',
+    height: user?.height?.toString() || '',
+    familyHistory: '',
+    physicalActivity: '',
+    diet: '',
+    smoking: '',
+    bloodPressure: '',
+    fastingGlucose: '',
+    hba1c: '',
+    cholesterol: '',
+    waistCircumference: '',
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+  if (user) {
+    setFormData(prev => ({
+      ...prev,
+      age: user?.age?.toString() || '',
+      gender: user?.gender || '',
+      weight: user?.weight?.toString() || '',
+      height: user?.height?.toString() || '',
+    }))
+  }
+}, [user])
 
   const basicSteps = [
     {
@@ -182,7 +194,7 @@ function ScreeningContent() {
         type: screeningType as 'basic' | 'comprehensive',
         riskLevel: level,
         score,
-        answers: formData,
+        answers: formData as unknown as Record<string, string | number | boolean>,
       })
 
       router.push('/screening/result')
@@ -517,9 +529,15 @@ function ScreeningContent() {
                     Waktu: sekitar 3 menit
                   </li>
                 </ul>
-                <Button className="w-full mt-6 font-mono">
-                  Pilih Skrining Dasar
-                </Button>
+                <Button 
+                className="w-full mt-6 font-mono"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setScreeningType('basic')
+                }}
+              >
+                Pilih Skrining Dasar
+              </Button>
               </CardContent>
             </Card>
 
@@ -555,9 +573,15 @@ function ScreeningContent() {
                     Waktu: sekitar 5 menit
                   </li>
                 </ul>
-                <Button className="w-full mt-6 font-mono">
-                  Pilih Skrining Komprehensif
-                </Button>
+                <Button 
+                className="w-full mt-6 font-mono"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setScreeningType('comprehensive')
+                }}
+              >
+                Pilih Skrining Komprehensif
+              </Button>
               </CardContent>
             </Card>
           </div>
@@ -645,7 +669,21 @@ function ScreeningContent() {
             onClick={() => {
               setScreeningType(null)
               setCurrentStep(0)
-              setFormData(initialFormData)
+              setFormData({
+                age: user?.age?.toString() || '',
+                gender: user?.gender || '',
+                weight: user?.weight?.toString() || '',
+                height: user?.height?.toString() || '',
+                familyHistory: '',
+                physicalActivity: '',
+                diet: '',
+                smoking: '',
+                bloodPressure: '',
+                fastingGlucose: '',
+                hba1c: '',
+                cholesterol: '',
+                waistCircumference: '',
+              })
               setErrors({})
             }}
           >

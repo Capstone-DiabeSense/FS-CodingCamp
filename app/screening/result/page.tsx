@@ -8,7 +8,6 @@ import { useScreening } from '@/lib/screening-context'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { MainLayout } from '@/components/main-layout'
 import { Providers } from '@/components/providers'
 import { 
@@ -27,8 +26,7 @@ import {
 } from 'lucide-react'
 
 function ScreeningResultContent() {
-  const router = useRouter()
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, isLoading } = useAuth()
   const { currentResult, updateResultMood } = useScreening()
   const [mood, setMood] = useState(currentResult?.mood || '')
   const [moodSaved, setMoodSaved] = useState(false)
@@ -143,10 +141,7 @@ function ScreeningResultContent() {
             <body>
               <h1>DiabeSense - Hasil Skrining</h1>
               <p>Tanggal: ${new Date(currentResult.date).toLocaleDateString('id-ID', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
               })}</p>
               <p>Jenis: ${currentResult.type === 'comprehensive' ? 'Skrining Komprehensif' : 'Skrining Dasar'}</p>
               <div class="risk-card ${currentResult.riskLevel}">
@@ -180,6 +175,9 @@ function ScreeningResultContent() {
     setTimeout(() => setMoodSaved(false), 3000)
   }
 
+  // Tampilkan area mood & login prompt hanya setelah auth selesai load
+  const showLoginPrompt = !isLoading && !isLoggedIn
+
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-16 md:py-24">
@@ -206,10 +204,7 @@ function ScreeningResultContent() {
               <div className="mt-4 text-sm text-muted-foreground">
                 <p>Jenis: {currentResult.type === 'comprehensive' ? 'Skrining Komprehensif' : 'Skrining Dasar'}</p>
                 <p>Tanggal: {new Date(currentResult.date).toLocaleDateString('id-ID', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
+                  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
                 })}</p>
               </div>
             </CardContent>
@@ -256,28 +251,31 @@ function ScreeningResultContent() {
                   onChange={(e) => setMood(e.target.value)}
                   rows={4}
                 />
-                {isLoggedIn ? (
-                  <div className="flex items-center gap-4">
-                    <Button 
-                      onClick={handleSaveMood} 
-                      className="font-mono"
-                      disabled={!mood.trim()}
-                    >
-                      <Save className="mr-2 h-4 w-4" />
-                      Simpan
-                    </Button>
-                    {moodSaved && (
-                      <span className="text-sm text-green-600 flex items-center gap-1">
-                        <CheckCircle className="h-4 w-4" />
-                        Tersimpan
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    <Link href="/login" className="text-primary hover:underline">Login</Link>
-                    {' '}untuk menyimpan catatan ini ke riwayat Anda.
-                  </p>
+                {/* Tunggu isLoading selesai sebelum render tombol/prompt */}
+                {!isLoading && (
+                  isLoggedIn ? (
+                    <div className="flex items-center gap-4">
+                      <Button
+                        onClick={handleSaveMood}
+                        className="font-mono"
+                        disabled={!mood.trim()}
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        Simpan
+                      </Button>
+                      {moodSaved && (
+                        <span className="text-sm text-green-600 flex items-center gap-1">
+                          <CheckCircle className="h-4 w-4" />
+                          Tersimpan
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      <Link href="/login" className="text-primary hover:underline">Login</Link>
+                      {' '}untuk menyimpan catatan ini ke riwayat Anda.
+                    </p>
+                  )
                 )}
               </div>
             </CardContent>
@@ -300,8 +298,8 @@ function ScreeningResultContent() {
             </CardContent>
           </Card>
 
-          {/* Login Prompt (if not logged in) */}
-          {!isLoggedIn && (
+          {/* Login Prompt — hanya muncul setelah loading selesai dan user belum login */}
+          {showLoginPrompt && (
             <Card className="mb-8 border-primary/50 bg-primary/5">
               <CardContent className="pt-6">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
