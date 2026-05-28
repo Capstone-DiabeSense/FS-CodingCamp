@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Poppins, Inter, Plus_Jakarta_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { Providers } from '@/components/providers'
 import './globals.css'
 
 const poppins = Poppins({
@@ -33,8 +34,10 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning className={`${poppins.variable} ${inter.variable} ${plusJakartaSans.variable} bg-background`}>
       <body className="font-sans antialiased min-h-screen">
-        {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        <Providers>
+          {children}
+          {process.env.NODE_ENV === 'production' && <Analytics />}
+        </Providers>
       </body>
     </html>
   )
