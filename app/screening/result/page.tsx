@@ -10,9 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Textarea } from '@/components/ui/textarea'
 import { MainLayout } from '@/components/main-layout'
 import { Providers } from '@/components/providers'
-import { 
-  AlertTriangle, 
-  CheckCircle, 
+import { DEFAULT_DISCLAIMER } from '@/lib/screening/constants'
+import {
+  AlertTriangle,
+  CheckCircle,
   AlertCircle,
   Printer,
   ArrowLeft,
@@ -22,7 +23,7 @@ import {
   Apple,
   Dumbbell,
   Moon,
-  Stethoscope
+  Stethoscope,
 } from 'lucide-react'
 
 function ScreeningResultContent() {
@@ -87,6 +88,8 @@ function ScreeningResultContent() {
 
   const riskConfig = getRiskConfig()
   const RiskIcon = riskConfig.icon
+  const disclaimerText = currentResult.disclaimer || DEFAULT_DISCLAIMER
+  const probabilityPercent = Math.round((currentResult.probability ?? currentResult.score / 100) * 100)
 
   const recommendations = [
     {
@@ -146,7 +149,7 @@ function ScreeningResultContent() {
               <p>Jenis: ${currentResult.type === 'comprehensive' ? 'Skrining Komprehensif' : 'Skrining Dasar'}</p>
               <div class="risk-card ${currentResult.riskLevel}">
                 <h2>${riskConfig.label}</h2>
-                <p>Skor Risiko: ${currentResult.score}/100</p>
+                <p>Probabilitas Risiko: ${probabilityPercent}%</p>
                 <p>${riskConfig.description}</p>
               </div>
               <h3>Rekomendasi Pencegahan</h3>
@@ -157,8 +160,7 @@ function ScreeningResultContent() {
                 </div>
               `).join('')}
               <div class="disclaimer">
-                <strong>Disclaimer:</strong> Hasil skrining ini bukan pengganti diagnosis medis profesional. 
-                Untuk penilaian yang akurat, konsultasikan dengan dokter atau tenaga kesehatan yang berkualifikasi.
+                <strong>Disclaimer:</strong> ${disclaimerText}
               </div>
             </body>
           </html>
@@ -197,9 +199,11 @@ function ScreeningResultContent() {
             </CardHeader>
             <CardContent className="text-center">
               <div className="inline-flex flex-col items-center">
-                <span className="text-sm text-muted-foreground font-mono">Skor Risiko</span>
-                <span className={`text-5xl font-bold ${riskConfig.color}`}>{currentResult.score}</span>
-                <span className="text-sm text-muted-foreground font-mono">dari 100</span>
+                <span className="text-sm text-muted-foreground font-mono">Probabilitas Risiko</span>
+                <span className={`text-5xl font-bold ${riskConfig.color}`}>{probabilityPercent}%</span>
+                <span className="text-sm text-muted-foreground font-mono">
+                  Kategori: {currentResult.riskCategory ?? riskConfig.label.replace('Risiko ', '')}
+                </span>
               </div>
               <div className="mt-4 text-sm text-muted-foreground">
                 <p>Jenis: {currentResult.type === 'comprehensive' ? 'Skrining Komprehensif' : 'Skrining Dasar'}</p>
@@ -289,9 +293,7 @@ function ScreeningResultContent() {
                 <div>
                   <h4 className="font-medium text-foreground mb-1">Disclaimer</h4>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Hasil skrining ini bukan pengganti diagnosis medis profesional. Untuk penilaian yang akurat, 
-                    konsultasikan dengan dokter atau tenaga kesehatan yang berkualifikasi. DiabeSense hanya 
-                    memberikan estimasi risiko berdasarkan jawaban yang Anda berikan.
+                    {disclaimerText}
                   </p>
                 </div>
               </div>

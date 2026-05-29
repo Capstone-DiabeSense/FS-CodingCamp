@@ -1,458 +1,322 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useScreening } from '@/lib/screening-context'
+import { useAuth } from '@/lib/auth-context'
+import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { MainLayout } from '@/components/main-layout'
-import { Providers } from '@/components/providers'
-import { ClipboardList, ClipboardCheck, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react'
-import { useAuth } from '@/lib/auth-context'
+import {
+  AGE_GROUPS,
+  BINARY_OPTIONS,
+  DEFAULT_DISCLAIMER,
+  FIELD_LABELS,
+  GENHLTH_OPTIONS,
+  INCOME_BRACKETS,
+} from '@/lib/screening/constants'
+import {
+  buildBasicPayload,
+  buildComprehensivePayload,
+  calculateBMI,
+  initialFormState,
+  mapRiskCategoryToLevel,
+} from '@/lib/screening/payload'
+import { getFieldsForStep, getStepTitles, validateStepFields } from '@/lib/screening/validation'
+import type { ScreeningFormState } from '@/lib/types/ml-screening'
+import { ClipboardList, ClipboardCheck, ArrowRight, ArrowLeft, Loader2, AlertCircle } from 'lucide-react'
 
 type ScreeningType = 'basic' | 'comprehensive' | null
-
-// Field names match API contract exactly
-interface FormData {
-  // Shared: basic & comprehensive (7 fields)
-  Age: string         
-  weight: string      
-  height: string      
-  HighBP: string      
-  GenHlth: string     
-  PhysActivity: string 
-  DiffWalk: string    
-  Smoker: string      
-  // Comprehensive (9 additional fields)
-  HighChol: string         
-  Stroke: string           
-  HeartDiseaseorAttack: string 
-  Veggies: string          
-  HvyAlcoholConsump: string 
-  MentHlth: string         
-  PhysHlth: string         
-  Income: string           
-  NoDocbcCost: string      
-}
-
-// Age group labels 
-const AGE_GROUPS = [
-  { value: '1', label: '18–24 tahun' },
-  { value: '2', label: '25–29 tahun' },
-  { value: '3', label: '30–34 tahun' },
-  { value: '4', label: '35–39 tahun' },
-  { value: '5', label: '40–44 tahun' },
-  { value: '6', label: '45–49 tahun' },
-  { value: '7', label: '50–54 tahun' },
-  { value: '8', label: '55–59 tahun' },
-  { value: '9', label: '60–64 tahun' },
-  { value: '10', label: '65–69 tahun' },
-  { value: '11', label: '70–74 tahun' },
-  { value: '12', label: '75–79 tahun' },
-  { value: '13', label: '80 tahun ke atas' },
-]
-
-const INCOME_GROUPS = [
-  { value: '1', label: 'Kurang dari Rp 1 juta/bulan' },
-  { value: '2', label: 'Rp 1 – 2 juta/bulan' },
-  { value: '3', label: 'Rp 2 – 3 juta/bulan' },
-  { value: '4', label: 'Rp 3 – 5 juta/bulan' },
-  { value: '5', label: 'Rp 5 – 7,5 juta/bulan' },
-  { value: '6', label: 'Rp 7,5 – 10 juta/bulan' },
-  { value: '7', label: 'Rp 10 – 15 juta/bulan' },
-  { value: '8', label: 'Lebih dari Rp 15 juta/bulan' },
-]
-
-// Basic: 3 steps | Comprehensive: 4 steps
-const basicSteps = [
-  {
-    title: 'Data Diri',
-    fields: ['Age', 'weight', 'height'],
-  },
-  {
-    title: 'Kondisi Kesehatan',
-    fields: ['HighBP', 'GenHlth', 'DiffWalk'],
-  },
-  {
-    title: 'Gaya Hidup',
-    fields: ['PhysActivity', 'Smoker'],
-  },
-]
-
-const comprehensiveSteps = [
-  ...basicSteps,
-  {
-    title: 'Data Tambahan',
-    fields: [
-      'HighChol', 'Stroke', 'HeartDiseaseorAttack',
-      'Veggies', 'HvyAlcoholConsump', 'NoDocbcCost',
-      'MentHlth', 'PhysHlth', 'Income',
-    ],
-  },
-]
 
 function ScreeningContent() {
   const router = useRouter()
   const { addResult } = useScreening()
-  const { user, isLoggedIn } = useAuth()
+  const { isLoggedIn } = useAuth()
   const [screeningType, setScreeningType] = useState<ScreeningType>(null)
   const [currentStep, setCurrentStep] = useState(0)
-  const [formData, setFormData] = useState<FormData>({
-    Age: '',
-    weight: '',
-    height: '',
-    HighBP: '',
-    GenHlth: '',
-    PhysActivity: '',
-    DiffWalk: '',
-    Smoker: '',
-    HighChol: '',
-    Stroke: '',
-    HeartDiseaseorAttack: '',
-    Veggies: '',
-    HvyAlcoholConsump: '',
-    MentHlth: '',
-    PhysHlth: '',
-    Income: '',
-    NoDocbcCost: '',
-  })
+  const [formData, setFormData] = useState<ScreeningFormState>(initialFormState)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
-  // Pre-fill weight & height from user profile 
-  useEffect(() => {
-    if (user) {
-      setFormData(prev => ({
-        ...prev,
-        weight: user?.weight?.toString() || '',
-        height: user?.height?.toString() || '',
-      }))
-    }
-  }, [user])
+  const stepTitles = screeningType ? getStepTitles(screeningType) : []
+  const steps = stepTitles.map((title, index) => ({
+    title,
+    fields: getFieldsForStep(screeningType!, index),
+  }))
 
-  const steps = screeningType === 'comprehensive' ? comprehensiveSteps : basicSteps
-
-  // Calculate BMI 
-  const calculateBMI = (): number | null => {
+  const bmiPreview = useMemo(() => {
     const w = Number(formData.weight)
-    const h = Number(formData.height) / 100
-    if (!w || !h) return null
-    const bmi = w / (h * h)
-    return Math.round(bmi * 10) / 10
+    const h = Number(formData.height)
+    if (!w || !h || isNaN(w) || isNaN(h)) return null
+    return calculateBMI(w, h)
+  }, [formData.weight, formData.height])
+
+  const updateField = (field: keyof ScreeningFormState, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    setErrors((prev) => {
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
+    setSubmitError(null)
   }
 
   const validateStep = () => {
-    const newErrors: Record<string, string> = {}
-    const currentFields = steps[currentStep]?.fields || []
-
-    currentFields.forEach((field) => {
-      const val = formData[field as keyof FormData]
-      if (val === '' || val === undefined) {
-        newErrors[field] = 'Wajib diisi'
-      }
-    })
-
-    // Weight & height range validation
-    if (currentFields.includes('weight') && formData.weight) {
-      const w = Number(formData.weight)
-      if (isNaN(w) || w < 20 || w > 300) newErrors.weight = 'Berat badan harus antara 20–300 kg'
-    }
-    if (currentFields.includes('height') && formData.height) {
-      const h = Number(formData.height)
-      if (isNaN(h) || h < 50 || h > 250) newErrors.height = 'Tinggi badan harus antara 50–250 cm'
-    }
-
-    // BMI range check (derived from weight & height)
-    if (currentFields.includes('weight') || currentFields.includes('height')) {
-      const bmi = calculateBMI()
-      if (bmi !== null && (bmi < 10 || bmi > 80)) {
-        newErrors.weight = 'BMI yang dihasilkan di luar rentang valid (10–80). Periksa kembali berat dan tinggi.'
-      }
-    }
-
-    // MentHlth & PhysHlth range
-    if (currentFields.includes('MentHlth') && formData.MentHlth !== '') {
-      const v = Number(formData.MentHlth)
-      if (isNaN(v) || v < 0 || v > 30) newErrors.MentHlth = 'Harus antara 0–30 hari'
-    }
-    if (currentFields.includes('PhysHlth') && formData.PhysHlth !== '') {
-      const v = Number(formData.PhysHlth)
-      if (isNaN(v) || v < 0 || v > 30) newErrors.PhysHlth = 'Harus antara 0–30 hari'
-    }
-
+    const fields = steps[currentStep]?.fields ?? []
+    const newErrors = validateStepFields(fields, formData)
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleNext = () => {
-    if (validateStep()) setCurrentStep(currentStep + 1)
+    if (validateStep()) setCurrentStep((s) => s + 1)
   }
 
-  const handleBack = () => {
-    setCurrentStep(currentStep - 1)
-  }
+  const handleBack = () => setCurrentStep((s) => s - 1)
 
-  const handleSubmit = () => {
-    if (!validateStep()) return
+  const handleSubmit = async () => {
+    if (!validateStep() || !screeningType) return
+
     setIsSubmitting(true)
+    setSubmitError(null)
 
-    const bmi = calculateBMI() ?? 0
+    try {
+      const payload =
+        screeningType === 'basic'
+          ? buildBasicPayload(formData)
+          : buildComprehensivePayload(formData)
 
-    // Build API payload 
-    const basicPayload = {
-      Age: Number(formData.Age),
-      BMI: bmi,
-      HighBP: Number(formData.HighBP),
-      GenHlth: Number(formData.GenHlth),
-      PhysActivity: Number(formData.PhysActivity),
-      DiffWalk: Number(formData.DiffWalk),
-      Smoker: Number(formData.Smoker),
-    }
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
 
-    const comprehensivePayload = {
-      ...basicPayload,
-      HighChol: Number(formData.HighChol),
-      Stroke: Number(formData.Stroke),
-      HeartDiseaseorAttack: Number(formData.HeartDiseaseorAttack),
-      Veggies: Number(formData.Veggies),
-      HvyAlcoholConsump: Number(formData.HvyAlcoholConsump),
-      MentHlth: Number(formData.MentHlth),
-      PhysHlth: Number(formData.PhysHlth),
-      Income: Number(formData.Income),
-      NoDocbcCost: Number(formData.NoDocbcCost),
-    }
+      if (screeningType === 'comprehensive') {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) {
+          setSubmitError('Login diperlukan untuk skrining komprehensif.')
+          setIsSubmitting(false)
+          return
+        }
+        headers.Authorization = `Bearer ${session.access_token}`
+      }
 
-    const payload = screeningType === 'comprehensive' ? comprehensivePayload : basicPayload
+      const endpoint =
+        screeningType === 'basic' ? '/api/screening/basic' : '/api/screening/comprehensive'
 
-    console.log('Payload siap dikirim ke backend:', payload)
-
-    setTimeout(() => {
-      addResult({
-        type: screeningType as 'basic' | 'comprehensive',
-        riskLevel: 'medium',   
-        score: 50,             
-        answers: payload as unknown as Record<string, string | number | boolean>,
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
       })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        if (data.fieldErrors) setErrors(data.fieldErrors)
+        setSubmitError(data.message ?? 'Terjadi kesalahan. Silakan coba lagi.')
+        return
+      }
+
+      const probability = data.probability as number
+      const riskCategory = data.risk_category as 'rendah' | 'sedang' | 'tinggi'
+
+      addResult({
+        type: screeningType,
+        riskLevel: mapRiskCategoryToLevel(riskCategory),
+        riskCategory,
+        score: Math.round(probability * 100),
+        probability,
+        mode: data.mode ?? screeningType,
+        thresholdUsed: data.threshold_used,
+        disclaimer: data.disclaimer ?? DEFAULT_DISCLAIMER,
+        answers: { form: { ...formData }, payload },
+      })
+
       router.push('/screening/result')
-    }, 1500)
+    } catch {
+      setSubmitError('Gagal menghubungi server. Periksa koneksi internet Anda.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const resetForm = () => {
-    setScreeningType(null)
-    setCurrentStep(0)
-    setFormData({
-      Age: '',
-      weight: user?.weight?.toString() || '',
-      height: user?.height?.toString() || '',
-      HighBP: '',
-      GenHlth: '',
-      PhysActivity: '',
-      DiffWalk: '',
-      Smoker: '',
-      HighChol: '',
-      Stroke: '',
-      HeartDiseaseorAttack: '',
-      Veggies: '',
-      HvyAlcoholConsump: '',
-      MentHlth: '',
-      PhysHlth: '',
-      Income: '',
-      NoDocbcCost: '',
-    })
-    setErrors({})
-  }
-
-  // Field renderers
-
-  const renderYesNo = (field: keyof FormData, label: string) => (
+  const renderSelectField = (
+    field: keyof ScreeningFormState,
+    options: { value: string; label: string }[],
+    placeholder: string,
+  ) => (
     <div className="space-y-2">
-      <Label>{label}</Label>
-      <RadioGroup
-        value={formData[field]}
-        onValueChange={(value) => setFormData({ ...formData, [field]: value })}
-        className="flex gap-6"
-      >
-        <div className="flex items-center space-x-2">
-          <RadioGroupItem value="1" id={`${field}-yes`} />
-          <Label htmlFor={`${field}-yes`} className="cursor-pointer">Ya</Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <RadioGroupItem value="0" id={`${field}-no`} />
-          <Label htmlFor={`${field}-no`} className="cursor-pointer">Tidak</Label>
-        </div>
-      </RadioGroup>
+      <Label>{FIELD_LABELS[field] ?? field}</Label>
+      <Select value={formData[field]} onValueChange={(v) => updateField(field, v)}>
+        <SelectTrigger className={`w-full ${errors[field] ? 'border-destructive' : ''}`}>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {errors[field] && <p className="text-sm text-destructive">{errors[field]}</p>}
     </div>
   )
 
-  const renderNumberInput = (
-    field: keyof FormData,
-    label: string,
-    placeholder: string,
-    hint?: string,
-    step?: string
-  ) => (
+  const renderBinaryField = (field: keyof ScreeningFormState, question: string) => (
     <div className="space-y-2">
-      <Label htmlFor={field}>{label}</Label>
-      <Input
-        id={field}
-        type="number"
-        step={step}
-        placeholder={placeholder}
+      <Label>{question}</Label>
+      <RadioGroup
         value={formData[field]}
-        onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-        className={errors[field] ? 'border-destructive' : ''}
-      />
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        onValueChange={(v) => updateField(field, v)}
+        className="space-y-2"
+      >
+        {BINARY_OPTIONS.map((opt) => (
+          <div key={opt.value} className="flex items-center space-x-2">
+            <RadioGroupItem value={opt.value} id={`${field}-${opt.value}`} />
+            <Label htmlFor={`${field}-${opt.value}`} className="cursor-pointer">
+              {opt.label}
+            </Label>
+          </div>
+        ))}
+      </RadioGroup>
       {errors[field] && <p className="text-sm text-destructive">{errors[field]}</p>}
     </div>
   )
 
   const renderField = (fieldName: string) => {
     switch (fieldName) {
-      // Age dropdown
-      case 'Age':
+      case 'ageGroup':
+        return renderSelectField('ageGroup', AGE_GROUPS, 'Pilih kelompok usia')
+      case 'weight':
         return (
           <div className="space-y-2">
-            <Label htmlFor="Age">Kelompok Umur</Label>
-            <Select
-              value={formData.Age}
-              onValueChange={(value) => setFormData({ ...formData, Age: value })}
-            >
-              <SelectTrigger id="Age" className={errors.Age ? 'border-destructive' : ''}>
-                <SelectValue placeholder="Pilih kelompok umur" />
-              </SelectTrigger>
-              <SelectContent>
-                {AGE_GROUPS.map((g) => (
-                  <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.Age && <p className="text-sm text-destructive">{errors.Age}</p>}
+            <Label htmlFor="weight">Berat Badan (kg)</Label>
+            <Input
+              id="weight"
+              type="number"
+              placeholder="Masukkan berat badan"
+              value={formData.weight}
+              onChange={(e) => updateField('weight', e.target.value)}
+              className={errors.weight ? 'border-destructive' : ''}
+            />
+            {errors.weight && <p className="text-sm text-destructive">{errors.weight}</p>}
           </div>
         )
-
-      // Weight & height
-      case 'weight':
-        return renderNumberInput('weight', 'Berat Badan (kg)', 'Contoh: 65', 'Digunakan untuk menghitung BMI')
       case 'height':
         return (
           <div className="space-y-2">
-            {renderNumberInput('height', 'Tinggi Badan (cm)', 'Contoh: 165', 'Digunakan untuk menghitung BMI')}
-            {/* Show live BMI preview once both fields filled */}
-            {formData.weight && formData.height && (() => {
-              const bmi = calculateBMI()
-              if (!bmi) return null
-              const category =
-                bmi < 18.5 ? 'Berat badan kurang' :
-                bmi < 25 ? 'Normal' :
-                bmi < 30 ? 'Kelebihan berat badan' : 'Obesitas'
-              return (
-                <p className="text-sm text-muted-foreground">
-                  BMI Anda: <span className="font-medium text-foreground">{bmi}</span> — {category}
-                </p>
-              )
-            })()}
+            <Label htmlFor="height">Tinggi Badan (cm)</Label>
+            <Input
+              id="height"
+              type="number"
+              placeholder="Masukkan tinggi badan"
+              value={formData.height}
+              onChange={(e) => updateField('height', e.target.value)}
+              className={errors.height ? 'border-destructive' : ''}
+            />
+            {bmiPreview !== null && (
+              <p className="text-xs text-muted-foreground">
+                BMI: <span className="font-mono">{bmiPreview}</span>
+              </p>
+            )}
+            {errors.height && <p className="text-sm text-destructive">{errors.height}</p>}
           </div>
         )
-
-      // Yes/No fields
-      case 'HighBP':
-        return renderYesNo('HighBP', 'Apakah Anda memiliki tekanan darah tinggi?')
-      case 'PhysActivity':
-        return renderYesNo('PhysActivity', 'Apakah Anda aktif berolahraga? (minimal 30 menit, 3x seminggu)')
-      case 'DiffWalk':
-        return renderYesNo('DiffWalk', 'Apakah Anda mengalami kesulitan berjalan atau menaiki tangga?')
-      case 'Smoker':
-        return renderYesNo('Smoker', 'Apakah Anda perokok? (atau pernah merokok ≥100 batang seumur hidup)')
-      case 'HighChol':
-        return renderYesNo('HighChol', 'Apakah Anda memiliki kolesterol tinggi?')
-      case 'Stroke':
-        return renderYesNo('Stroke', 'Apakah Anda pernah mengalami stroke?')
-      case 'HeartDiseaseorAttack':
-        return renderYesNo('HeartDiseaseorAttack', 'Apakah Anda pernah mengalami penyakit jantung atau serangan jantung?')
-      case 'Veggies':
-        return renderYesNo('Veggies', 'Apakah Anda mengonsumsi sayuran setiap hari?')
-      case 'HvyAlcoholConsump':
-        return renderYesNo('HvyAlcoholConsump', 'Apakah Anda mengonsumsi alkohol berat? (pria >14 gelas/minggu, wanita >7 gelas/minggu)')
-      case 'NoDocbcCost':
-        return renderYesNo('NoDocbcCost', 'Apakah Anda pernah melewatkan kunjungan dokter karena biaya?')
-
-      // GenHlth
-      case 'GenHlth':
+      case 'highBP':
+        return renderBinaryField('highBP', 'Apakah Anda pernah diberitahu memiliki tekanan darah tinggi?')
+      case 'genHlth':
+        return renderSelectField('genHlth', GENHLTH_OPTIONS, 'Pilih kondisi kesehatan umum')
+      case 'physActivity':
+        return renderBinaryField(
+          'physActivity',
+          'Apakah Anda melakukan aktivitas fisik dalam 30 hari terakhir?',
+        )
+      case 'diffWalk':
+        return renderBinaryField('diffWalk', 'Apakah Anda mengalami kesulitan berjalan atau naik tangga?')
+      case 'smoker':
+        return renderBinaryField(
+          'smoker',
+          'Apakah Anda pernah merokok ≥100 batang sepanjang hidup?',
+        )
+      case 'highChol':
+        return renderBinaryField('highChol', 'Apakah Anda pernah diberitahu memiliki kolesterol tinggi?')
+      case 'stroke':
+        return renderBinaryField('stroke', 'Apakah Anda pernah mengalami stroke?')
+      case 'heartDisease':
+        return renderBinaryField(
+          'heartDisease',
+          'Apakah Anda pernah didiagnosis penyakit jantung atau serangan jantung?',
+        )
+      case 'veggies':
+        return renderBinaryField('veggies', 'Apakah Anda mengonsumsi sayur ≥1 kali per hari?')
+      case 'hvyAlcohol':
+        return renderBinaryField(
+          'hvyAlcohol',
+          'Apakah Anda mengonsumsi alkohol berat (pria >14 gelas/minggu, wanita >7 gelas/minggu)?',
+        )
+      case 'mentHlth':
         return (
           <div className="space-y-2">
-            <Label>Bagaimana kondisi kesehatan umum Anda secara keseluruhan?</Label>
-            <RadioGroup
-              value={formData.GenHlth}
-              onValueChange={(value) => setFormData({ ...formData, GenHlth: value })}
-              className="space-y-2"
-            >
-              {[
-                { value: '1', label: 'Sangat Baik' },
-                { value: '2', label: 'Baik' },
-                { value: '3', label: 'Cukup' },
-                { value: '4', label: 'Buruk' },
-                { value: '5', label: 'Sangat Buruk' },
-              ].map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2">
-                  <RadioGroupItem value={opt.value} id={`genhlth-${opt.value}`} />
-                  <Label htmlFor={`genhlth-${opt.value}`} className="cursor-pointer">{opt.label}</Label>
-                </div>
-              ))}
-            </RadioGroup>
-            {errors.GenHlth && <p className="text-sm text-destructive">{errors.GenHlth}</p>}
+            <Label htmlFor="mentHlth">Hari kesehatan mental buruk (30 hari terakhir)</Label>
+            <Input
+              id="mentHlth"
+              type="number"
+              min={0}
+              max={30}
+              placeholder="0–30 hari"
+              value={formData.mentHlth}
+              onChange={(e) => updateField('mentHlth', e.target.value)}
+              className={errors.mentHlth ? 'border-destructive' : ''}
+            />
+            <p className="text-xs text-muted-foreground">
+              Berapa hari kesehatan mental Anda kurang baik (stress, depresi, dll)?
+            </p>
+            {errors.mentHlth && <p className="text-sm text-destructive">{errors.mentHlth}</p>}
           </div>
         )
-
-      // MentHlth & PhysHlth
-      case 'MentHlth':
-        return renderNumberInput(
-          'MentHlth',
-          'Berapa hari kesehatan mental Anda buruk dalam 30 hari terakhir?',
-          'Masukkan angka 0–30',
-          'Contoh: stres, depresi, atau masalah emosional'
-        )
-      case 'PhysHlth':
-        return renderNumberInput(
-          'PhysHlth',
-          'Berapa hari kesehatan fisik Anda buruk dalam 30 hari terakhir?',
-          'Masukkan angka 0–30',
-          'Contoh: sakit, cedera, atau tidak fit secara fisik'
-        )
-
-      // Income dropdown
-      case 'Income':
+      case 'physHlth':
         return (
           <div className="space-y-2">
-            <Label htmlFor="Income">Kategori Pendapatan</Label>
-            <Select
-              value={formData.Income}
-              onValueChange={(value) => setFormData({ ...formData, Income: value })}
-            >
-              <SelectTrigger id="Income" className={errors.Income ? 'border-destructive' : ''}>
-                <SelectValue placeholder="Pilih kategori pendapatan" />
-              </SelectTrigger>
-              <SelectContent>
-                {INCOME_GROUPS.map((g) => (
-                  <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.Income && <p className="text-sm text-destructive">{errors.Income}</p>}
+            <Label htmlFor="physHlth">Hari kesehatan fisik buruk (30 hari terakhir)</Label>
+            <Input
+              id="physHlth"
+              type="number"
+              min={0}
+              max={30}
+              placeholder="0–30 hari"
+              value={formData.physHlth}
+              onChange={(e) => updateField('physHlth', e.target.value)}
+              className={errors.physHlth ? 'border-destructive' : ''}
+            />
+            <p className="text-xs text-muted-foreground">
+              Berapa hari kesehatan fisik Anda kurang baik (sakit, cedera, dll)?
+            </p>
+            {errors.physHlth && <p className="text-sm text-destructive">{errors.physHlth}</p>}
           </div>
         )
-
+      case 'income':
+        return renderSelectField('income', INCOME_BRACKETS, 'Pilih tingkat penghasilan')
+      case 'noDocbcCost':
+        return renderBinaryField(
+          'noDocbcCost',
+          'Apakah ada waktu Anda tidak bisa periksa ke dokter karena biaya?',
+        )
       default:
         return null
     }
   }
 
-  // Type selection screen
   if (!screeningType) {
     return (
       <MainLayout>
@@ -467,7 +331,6 @@ function ScreeningContent() {
           </div>
 
           <div className="mx-auto max-w-2xl grid gap-6 md:grid-cols-2">
-            {/* Basic */}
             <Card
               className="cursor-pointer transition-all hover:border-primary hover:shadow-lg"
               onClick={() => setScreeningType('basic')}
@@ -477,30 +340,42 @@ function ScreeningContent() {
                   <ClipboardList className="h-8 w-8 text-primary" />
                 </div>
                 <CardTitle className="font-serif text-xl">Skrining Dasar</CardTitle>
-                <CardDescription>Penilaian risiko berdasarkan data dasar dan gaya hidup</CardDescription>
+                <CardDescription>
+                  7 indikator risiko — tersedia untuk semua pengguna
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  {['Kelompok umur & BMI', 'Tekanan darah & persepsi kesehatan', 'Aktivitas fisik & kebiasaan merokok', 'Waktu: sekitar 3 menit'].map((item) => (
-                    <li key={item} className="flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      {item}
-                    </li>
-                  ))}
+                  <li className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    Usia, BMI, tekanan darah
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    Aktivitas fisik & merokok
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    Persepsi kesehatan umum
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    Waktu: sekitar 3 menit
+                  </li>
                 </ul>
-                <Button
-                  className="w-full mt-6 font-mono"
-                  onClick={(e) => { e.stopPropagation(); setScreeningType('basic') }}
-                >
-                  Pilih Skrining Dasar
-                </Button>
+                <Button className="w-full mt-6 font-mono">Pilih Skrining Dasar</Button>
               </CardContent>
             </Card>
 
-            {/* Comprehensive */}
             <Card
-              className={`transition-all hover:shadow-lg ${isLoggedIn ? 'cursor-pointer hover:border-primary' : 'opacity-60 cursor-not-allowed'}`}
-              onClick={() => isLoggedIn && setScreeningType('comprehensive')}
+              className={`cursor-pointer transition-all hover:border-primary hover:shadow-lg ${!isLoggedIn ? 'opacity-90' : ''}`}
+              onClick={() => {
+                if (!isLoggedIn) {
+                  router.push('/login')
+                  return
+                }
+                setScreeningType('comprehensive')
+              }}
             >
               <CardHeader className="text-center">
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
@@ -508,25 +383,29 @@ function ScreeningContent() {
                 </div>
                 <CardTitle className="font-serif text-xl">Skrining Komprehensif</CardTitle>
                 <CardDescription>
-                  {isLoggedIn
-                    ? 'Penilaian lengkap dengan 16 faktor risiko'
-                    : 'Login diperlukan untuk skrining komprehensif'}
+                  16 indikator risiko — memerlukan login
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  {['Semua data skrining dasar', 'Riwayat stroke & penyakit jantung', 'Konsumsi sayur, alkohol, kolesterol', 'Kondisi mental & fisik 30 hari terakhir', 'Waktu: sekitar 5 menit'].map((item) => (
-                    <li key={item} className="flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      {item}
-                    </li>
-                  ))}
+                  <li className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    Semua indikator skrining dasar
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    Riwayat stroke, jantung, kolesterol
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    Kesehatan mental, fisik & penghasilan
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    Waktu: sekitar 5 menit
+                  </li>
                 </ul>
-                <Button
-                  className="w-full mt-6 font-mono"
-                  disabled={!isLoggedIn}
-                  onClick={(e) => { e.stopPropagation(); if (isLoggedIn) setScreeningType('comprehensive') }}
-                >
+                <Button className="w-full mt-6 font-mono">
                   {isLoggedIn ? 'Pilih Skrining Komprehensif' : 'Login untuk Akses'}
                 </Button>
               </CardContent>
@@ -537,16 +416,18 @@ function ScreeningContent() {
     )
   }
 
-  // Multi-step form
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-16 md:py-24">
         <div className="mx-auto max-w-2xl">
-          {/* Progress bar */}
           <div className="mb-8">
             <div className="flex justify-between text-sm text-muted-foreground mb-2">
-              <span className="font-mono">Langkah {currentStep + 1} dari {steps.length}</span>
-              <span className="font-mono">{Math.round(((currentStep + 1) / steps.length) * 100)}%</span>
+              <span className="font-mono">
+                Langkah {currentStep + 1} dari {steps.length}
+              </span>
+              <span className="font-mono">
+                {Math.round(((currentStep + 1) / steps.length) * 100)}%
+              </span>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
@@ -564,6 +445,13 @@ function ScreeningContent() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {submitError && (
+                <div className="flex gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+                  <AlertCircle className="h-5 w-5 shrink-0" />
+                  <p>{submitError}</p>
+                </div>
+              )}
+
               {steps[currentStep]?.fields.map((field) => (
                 <div key={field}>{renderField(field)}</div>
               ))}
@@ -582,11 +470,15 @@ function ScreeningContent() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button onClick={handleSubmit} className="ml-auto font-mono" disabled={isSubmitting}>
+                  <Button
+                    onClick={handleSubmit}
+                    className="ml-auto font-mono"
+                    disabled={isSubmitting}
+                  >
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Menghitung...
+                        Menghitung risiko…
                       </>
                     ) : (
                       'Cek Risiko Saya'
@@ -597,7 +489,17 @@ function ScreeningContent() {
             </CardContent>
           </Card>
 
-          <Button variant="ghost" className="mt-4 font-mono" onClick={resetForm}>
+          <Button
+            variant="ghost"
+            className="mt-4 font-mono"
+            onClick={() => {
+              setScreeningType(null)
+              setCurrentStep(0)
+              setFormData(initialFormState)
+              setErrors({})
+              setSubmitError(null)
+            }}
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Pilih jenis skrining lain
           </Button>
