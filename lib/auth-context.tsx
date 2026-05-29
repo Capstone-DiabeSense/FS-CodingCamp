@@ -27,9 +27,49 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+function profileFromAuthUser(supabaseUser: SupabaseUser): Omit<User, 'age' | 'height' | 'weight' | 'gender'> {
+  const metadata = supabaseUser.user_metadata ?? {}
+  return {
+    id: supabaseUser.id,
+    name: metadata.name ?? supabaseUser.email?.split('@')[0] ?? 'User',
+    email: supabaseUser.email ?? '',
+    phone: metadata.phone ?? '',
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
+    const { data } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', supabaseUser.id)
+      .maybeSingle()
+
+    if (data) {
+      setUser(data)
+      setIsLoading(false)
+      return
+    }
+
+    const profile = profileFromAuthUser(supabaseUser)
+    const { data: created, error } = await supabase
+      .from('users')
+      .insert(profile)
+      .select('*')
+      .single()
+
+    if (created) {
+      setUser(created)
+    } else if (error) {
+      console.error('[auth] profile fallback failed:', error.message)
+      setUser(profile)
+    }
+
+    setIsLoading(false)
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -52,17 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
-    const { data } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', supabaseUser.id)
-      .single()
-
-    if (data) setUser(data)
-    setIsLoading(false)
-  }
-
   const login = async (email: string, password: string): Promise<boolean> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return !error
@@ -72,16 +101,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: string,
     email: string,
     phone: string,
-    password: string
+    password: string,
   ): Promise<boolean> => {
-    const { data, error } = await supabase.auth.signUp({ email, password })
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name, phone } },
+    })
     if (error || !data.user) return false
 
-    const { error: profileError } = await supabase
-      .from('users')
-      .insert({ id: data.user.id, name, email, phone })
+    const { error: profileError } = await supabase.from('users').insert({
+      id: data.user.id,
+      name,
+      email,
+      phone,
+    })
 
-    return !profileError
+    if (profileError && !profileError.message.includes('duplicate key')) {
+      console.error('[auth] register profile insert failed:', profileError.message)
+      return false
+    }
+
+    return true
   }
 
   const logout = async () => {
