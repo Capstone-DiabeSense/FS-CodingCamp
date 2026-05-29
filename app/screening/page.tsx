@@ -697,9 +697,5 @@ function ScreeningContent() {
 }
 
 export default function ScreeningPage() {
-  return (
-    <Providers>
-      <ScreeningContent />
-    </Providers>
-  )
+  return <ScreeningContent />
 }

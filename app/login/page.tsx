@@ -204,7 +204,7 @@ function RegisterForm({
         <Input
           id="register-phone"
           type="tel"
-          placeholder="08xxxxxxxxxx"
+          placeholder="081234567890"
           value={form.phone}
           onChange={(e) => setForm({ ...form, phone: e.target.value })}
           required
@@ -360,11 +360,10 @@ function LoginContent() {
                   <button
                     key={tab}
                     type="button"
-                    className={`flex-1 rounded-md py-2 font-mono text-sm font-medium capitalize transition-colors ${
-                      activeTab === tab
+                    className={`flex-1 rounded-md py-2 font-mono text-sm font-medium capitalize transition-colors ${activeTab === tab
                         ? 'bg-background text-foreground shadow-sm'
                         : 'text-muted-foreground hover:text-foreground'
-                    }`}
+                      }`}
                     onClick={() => switchTab(tab)}
                   >
                     {tab === 'login' ? 'Login' : 'Register'}

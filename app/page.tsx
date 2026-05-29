@@ -5,14 +5,15 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MainLayout } from '@/components/main-layout'
-import { Providers } from '@/components/providers'
+import { HeroBackground } from '@/components/hero-background'
 import { useAuth } from '@/lib/auth-context'
-import { 
-  Activity, 
-  Shield, 
-  Clock, 
-  BarChart3, 
-  CheckCircle, 
+import { useTranslation } from 'react-i18next'
+import {
+  Activity,
+  Shield,
+  Clock,
+  BarChart3,
+  CheckCircle,
   ArrowRight,
   Smartphone,
   FileText,
@@ -60,6 +61,7 @@ const riskDistribution = [
 
 function DashboardContent() {
   const { isLoggedIn, isLoading } = useAuth()
+  const { t } = useTranslation()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -105,44 +107,45 @@ function DashboardContent() {
     <MainLayout>
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-secondary/20 py-20 md:py-32">
-        <div className="container mx-auto px-4">
+        <HeroBackground />
+        
+        <div className="container mx-auto px-4 relative z-10">
           <div className="mx-auto max-w-3xl text-center">
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary mb-6">
               <Activity className="h-4 w-4" />
-              <span className="font-mono">Platform Skrining Diabetes Terpercaya</span>
+              <span className="font-mono">{t('hero_badge')}</span>
             </div>
-            
+
             <h1 className="font-serif text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl text-balance">
-              Kenali Risiko Diabetes Anda Lebih Awal dengan{' '}
+              {t('hero_title_1')}{' '}
               <span className="text-primary">DiabeSense</span>
             </h1>
-            
+
             <p className="mt-6 text-lg text-muted-foreground leading-relaxed md:text-xl">
-              Deteksi dini adalah kunci pencegahan. Lakukan skrining risiko diabetes secara mandiri, 
-              cepat, dan akurat dari mana saja.
+              {t('hero_subtitle')}
             </p>
-            
+
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Link href="/screening">
                 <Button size="lg" className="font-mono gap-2 w-full sm:w-auto">
-                  Coba Skrining Sekarang
+                  {t('hero_btn_1')}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <a 
-                href="https://example.com/dashboard-analitik" 
-                target="_blank" 
+              <a
+                href="https://example.com/dashboard-analitik"
+                target="_blank"
                 rel="noopener noreferrer"
               >
                 <Button variant="outline" size="lg" className="font-mono gap-2 w-full sm:w-auto">
-                  Lihat Dashboard Analitik
+                  {t('hero_btn_2')}
                   <ExternalLink className="h-4 w-4" />
                 </Button>
               </a>
             </div>
           </div>
         </div>
-        
+
         {/* Decorative elements */}
         <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-secondary/30 blur-3xl" />
@@ -156,9 +159,9 @@ function DashboardContent() {
               Tentang DiabeSense
             </h2>
             <p className="mt-4 text-muted-foreground leading-relaxed">
-              DiabeSense adalah aplikasi web inovatif yang membantu masyarakat Indonesia 
-              mengenali potensi risiko diabetes sejak dini. Dengan menggunakan kuesioner 
-              berbasis bukti ilmiah, aplikasi ini memberikan penilaian risiko yang akurat 
+              DiabeSense adalah aplikasi web inovatif yang membantu masyarakat Indonesia
+              mengenali potensi risiko diabetes sejak dini. Dengan menggunakan kuesioner
+              berbasis bukti ilmiah, aplikasi ini memberikan penilaian risiko yang akurat
               serta rekomendasi pencegahan yang personal.
             </p>
           </div>
@@ -209,18 +212,18 @@ function DashboardContent() {
                       <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.02 200)" />
                       <XAxis dataKey="month" stroke="oklch(0.5 0.02 200)" fontSize={12} />
                       <YAxis stroke="oklch(0.5 0.02 200)" fontSize={12} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'oklch(1 0 0)', 
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'oklch(1 0 0)',
                           border: '1px solid oklch(0.9 0.02 200)',
                           borderRadius: '8px',
                           fontFamily: 'var(--font-mono)'
-                        }} 
+                        }}
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="cases" 
-                        stroke="oklch(0.55 0.15 180)" 
+                      <Line
+                        type="monotone"
+                        dataKey="cases"
+                        stroke="oklch(0.55 0.15 180)"
                         strokeWidth={3}
                         dot={{ fill: 'oklch(0.55 0.15 180)', strokeWidth: 2 }}
                       />
@@ -253,13 +256,13 @@ function DashboardContent() {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'oklch(1 0 0)', 
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'oklch(1 0 0)',
                           border: '1px solid oklch(0.9 0.02 200)',
                           borderRadius: '8px',
                           fontFamily: 'var(--font-mono)'
-                        }} 
+                        }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -267,8 +270,8 @@ function DashboardContent() {
                 <div className="flex justify-center gap-4 mt-4">
                   {riskDistribution.map((item, index) => (
                     <div key={index} className="flex items-center gap-2">
-                      <div 
-                        className="h-3 w-3 rounded-full" 
+                      <div
+                        className="h-3 w-3 rounded-full"
                         style={{ backgroundColor: item.color }}
                       />
                       <span className="text-xs text-muted-foreground font-mono">{item.name}</span>
@@ -291,17 +294,17 @@ function DashboardContent() {
                       <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.02 200)" />
                       <XAxis dataKey="age" stroke="oklch(0.5 0.02 200)" fontSize={12} />
                       <YAxis stroke="oklch(0.5 0.02 200)" fontSize={12} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'oklch(1 0 0)', 
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'oklch(1 0 0)',
                           border: '1px solid oklch(0.9 0.02 200)',
                           borderRadius: '8px',
                           fontFamily: 'var(--font-mono)'
-                        }} 
+                        }}
                       />
-                      <Bar 
-                        dataKey="count" 
-                        fill="oklch(0.55 0.15 180)" 
+                      <Bar
+                        dataKey="count"
+                        fill="oklch(0.55 0.15 180)"
                         radius={[4, 4, 0, 0]}
                       />
                     </BarChart>
@@ -322,14 +325,14 @@ function DashboardContent() {
                 Dapatkan Akses Penuh ke Fitur DiabeSense
               </h2>
               <p className="mt-4 text-primary-foreground/80 leading-relaxed">
-                Login untuk menyimpan riwayat skrining, memantau perkembangan risiko, 
+                Login untuk menyimpan riwayat skrining, memantau perkembangan risiko,
                 dan mengatur reminder skrining berkala.
               </p>
               <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                 <Link href="/login">
-                  <Button 
-                    size="lg" 
-                    variant="secondary" 
+                  <Button
+                    size="lg"
+                    variant="secondary"
                     className="font-mono gap-2 w-full sm:w-auto"
                   >
                     <CheckCircle className="h-4 w-4" />
@@ -337,10 +340,10 @@ function DashboardContent() {
                   </Button>
                 </Link>
                 <Link href="/login?tab=register">
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
-                    className="font-mono border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 w-full sm:w-auto"
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="font-mono bg-primary-foreground/10 text-primary-foreground hover:border-primary-foreground/30 w-full sm:w-auto"
                   >
                     Daftar Gratis
                   </Button>
@@ -355,9 +358,5 @@ function DashboardContent() {
 }
 
 export default function DashboardPage() {
-  return (
-    <Providers>
-      <DashboardContent />
-    </Providers>
-  )
+  return <DashboardContent />
 }
