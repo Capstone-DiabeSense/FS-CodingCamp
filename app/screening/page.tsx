@@ -19,27 +19,27 @@ type ScreeningType = 'basic' | 'comprehensive' | null
 // Field names match API contract exactly
 interface FormData {
   // Shared: basic & comprehensive (7 fields)
-  Age: string         // int 1-13, dropdown
-  weight: string      // helper field to calculate BMI
-  height: string      // helper field to calculate BMI
-  HighBP: string      // int 0/1
-  GenHlth: string     // int 1-5
-  PhysActivity: string // int 0/1
-  DiffWalk: string    // int 0/1
-  Smoker: string      // int 0/1
-  // Comprehensive only (9 additional fields)
-  HighChol: string         // int 0/1
-  Stroke: string           // int 0/1
-  HeartDiseaseorAttack: string // int 0/1
-  Veggies: string          // int 0/1
-  HvyAlcoholConsump: string // int 0/1
-  MentHlth: string         // int 0-30
-  PhysHlth: string         // int 0-30
-  Income: string           // int 1-8
-  NoDocbcCost: string      // int 0/1
+  Age: string         
+  weight: string      
+  height: string      
+  HighBP: string      
+  GenHlth: string     
+  PhysActivity: string 
+  DiffWalk: string    
+  Smoker: string      
+  // Comprehensive (9 additional fields)
+  HighChol: string         
+  Stroke: string           
+  HeartDiseaseorAttack: string 
+  Veggies: string          
+  HvyAlcoholConsump: string 
+  MentHlth: string         
+  PhysHlth: string         
+  Income: string           
+  NoDocbcCost: string      
 }
 
-// Age group labels per BRFSS encoding
+// Age group labels 
 const AGE_GROUPS = [
   { value: '1', label: '18–24 tahun' },
   { value: '2', label: '25–29 tahun' },
@@ -123,7 +123,7 @@ function ScreeningContent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Pre-fill weight & height from user profile if available
+  // Pre-fill weight & height from user profile 
   useEffect(() => {
     if (user) {
       setFormData(prev => ({
@@ -136,7 +136,7 @@ function ScreeningContent() {
 
   const steps = screeningType === 'comprehensive' ? comprehensiveSteps : basicSteps
 
-  // Calculate BMI from height (cm) and weight (kg)
+  // Calculate BMI 
   const calculateBMI = (): number | null => {
     const w = Number(formData.weight)
     const h = Number(formData.height) / 100
@@ -202,7 +202,7 @@ function ScreeningContent() {
 
     const bmi = calculateBMI() ?? 0
 
-    // Build API payload — field names must match contract exactly
+    // Build API payload 
     const basicPayload = {
       Age: Number(formData.Age),
       BMI: bmi,
@@ -228,24 +228,13 @@ function ScreeningContent() {
 
     const payload = screeningType === 'comprehensive' ? comprehensivePayload : basicPayload
 
-    // TODO: Kirim payload ke Express.js backend, bukan langsung ke FastAPI
-    // Contoh:
-    // const res = await fetch('/api/screening/predict', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(payload),
-    // })
-    // const data = await res.json()
-    // → data.probability, data.risk_category, data.disclaimer
-
-    // Placeholder result — hapus/ganti setelah backend tersambung
     console.log('Payload siap dikirim ke backend:', payload)
 
     setTimeout(() => {
       addResult({
         type: screeningType as 'basic' | 'comprehensive',
-        riskLevel: 'medium',   // ganti dengan data.risk_category dari API
-        score: 50,             // ganti dengan Math.round(data.probability * 100)
+        riskLevel: 'medium',   
+        score: 50,             
         answers: payload as unknown as Record<string, string | number | boolean>,
       })
       router.push('/screening/result')
@@ -277,7 +266,7 @@ function ScreeningContent() {
     setErrors({})
   }
 
-  // --- Field renderers ---
+  // Field renderers
 
   const renderYesNo = (field: keyof FormData, label: string) => (
     <div className="space-y-2">
@@ -325,7 +314,7 @@ function ScreeningContent() {
 
   const renderField = (fieldName: string) => {
     switch (fieldName) {
-      // --- Age dropdown ---
+      // Age dropdown
       case 'Age':
         return (
           <div className="space-y-2">
@@ -347,7 +336,7 @@ function ScreeningContent() {
           </div>
         )
 
-      // --- Weight & height (for BMI calculation) ---
+      // Weight & height
       case 'weight':
         return renderNumberInput('weight', 'Berat Badan (kg)', 'Contoh: 65', 'Digunakan untuk menghitung BMI')
       case 'height':
@@ -371,7 +360,7 @@ function ScreeningContent() {
           </div>
         )
 
-      // --- Yes/No fields ---
+      // Yes/No fields
       case 'HighBP':
         return renderYesNo('HighBP', 'Apakah Anda memiliki tekanan darah tinggi?')
       case 'PhysActivity':
@@ -393,7 +382,7 @@ function ScreeningContent() {
       case 'NoDocbcCost':
         return renderYesNo('NoDocbcCost', 'Apakah Anda pernah melewatkan kunjungan dokter karena biaya?')
 
-      // --- GenHlth: scale 1-5 ---
+      // GenHlth
       case 'GenHlth':
         return (
           <div className="space-y-2">
@@ -420,7 +409,7 @@ function ScreeningContent() {
           </div>
         )
 
-      // --- MentHlth & PhysHlth: 0-30 ---
+      // MentHlth & PhysHlth
       case 'MentHlth':
         return renderNumberInput(
           'MentHlth',
@@ -436,7 +425,7 @@ function ScreeningContent() {
           'Contoh: sakit, cedera, atau tidak fit secara fisik'
         )
 
-      // --- Income dropdown ---
+      // Income dropdown
       case 'Income':
         return (
           <div className="space-y-2">
@@ -463,7 +452,7 @@ function ScreeningContent() {
     }
   }
 
-  // --- Type selection screen ---
+  // Type selection screen
   if (!screeningType) {
     return (
       <MainLayout>
@@ -548,7 +537,7 @@ function ScreeningContent() {
     )
   }
 
-  // --- Multi-step form ---
+  // Multi-step form
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-16 md:py-24">
