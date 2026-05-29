@@ -8,8 +8,13 @@ export interface ScreeningResult {
   date: string
   type: 'basic' | 'comprehensive'
   riskLevel: 'low' | 'medium' | 'high'
+  riskCategory: 'rendah' | 'sedang' | 'tinggi'
   score: number
-  answers: Record<string, string | number | boolean>
+  probability: number
+  mode: 'basic' | 'comprehensive'
+  thresholdUsed?: number
+  disclaimer: string
+  answers: Record<string, unknown>
   mood?: string
 }
 
