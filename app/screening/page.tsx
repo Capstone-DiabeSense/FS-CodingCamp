@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useScreening } from '@/lib/screening-context'
 import { useAuth } from '@/lib/auth-context'
@@ -42,7 +42,7 @@ type ScreeningType = 'basic' | 'comprehensive' | null
 function ScreeningContent() {
   const router = useRouter()
   const { addResult } = useScreening()
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, user } = useAuth()
   const [screeningType, setScreeningType] = useState<ScreeningType>(null)
   const [currentStep, setCurrentStep] = useState(0)
   const [formData, setFormData] = useState<ScreeningFormState>(initialFormState)
@@ -50,6 +50,15 @@ function ScreeningContent() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        weight: user?.weight?.toString() || '',
+        height: user?.height?.toString() || '',
+      }))
+    }
+  }, [user])
   const stepTitles = screeningType ? getStepTitles(screeningType) : []
   const steps = stepTitles.map((title, index) => ({
     title,
@@ -495,7 +504,11 @@ function ScreeningContent() {
             onClick={() => {
               setScreeningType(null)
               setCurrentStep(0)
-              setFormData(initialFormState)
+              setFormData({
+                ...initialFormState,
+                weight: user?.weight?.toString() || '',
+                height: user?.height?.toString() || '',
+              })
               setErrors({})
               setSubmitError(null)
             }}
