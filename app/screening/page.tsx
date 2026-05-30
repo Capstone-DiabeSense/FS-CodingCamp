@@ -383,7 +383,7 @@ function ScreeningContent() {
                 </div>
                 <CardTitle className="font-serif text-xl">Skrining Komprehensif</CardTitle>
                 <CardDescription>
-                  16 indikator risiko — memerlukan login
+                  16 indikator risiko — terssedia saat pengguna login
                 </CardDescription>
               </CardHeader>
               <CardContent>
