@@ -179,7 +179,7 @@ function ScreeningContent() {
       <RadioGroup
         value={formData[field]}
         onValueChange={(v) => updateField(field, v)}
-        className="space-y-2"
+        className="mt-3 flex flex-col gap-3"
       >
         {BINARY_OPTIONS.map((opt) => (
           <div key={opt.value} className="flex items-center space-x-2">
