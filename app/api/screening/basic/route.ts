@@ -1,13 +1,18 @@
 import { NextResponse } from 'next/server'
 import { mapValidationErrors, getErrorMessage } from '@/lib/screening/errors'
-import { MLServiceCallError, predictBasic } from '@/lib/services/ml.service'
+import {
+  MLServiceCallError,
+  fetchExplanationForPrediction,
+  predictBasic,
+} from '@/lib/services/ml.service'
 import type { BasicScreeningRequest } from '@/lib/types/ml-screening'
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as BasicScreeningRequest
     const result = await predictBasic(body)
-    return NextResponse.json(result)
+    const penjelasan = await fetchExplanationForPrediction(result)
+    return NextResponse.json({ ...result, penjelasan })
   } catch (err) {
     if (err instanceof MLServiceCallError) {
       if (err.status === 422 && err.details) {

@@ -17,6 +17,7 @@ export interface ScreeningResult {
   disclaimer: string
   answers: Record<string, unknown>
   mood?: string
+  explanation?: string
 }
 
 export interface Reminder {

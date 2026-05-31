@@ -1,6 +1,8 @@
 import type {
   BasicScreeningRequest,
   ComprehensiveScreeningRequest,
+  ExplainRequest,
+  ExplainResponse,
   PredictionResponse,
   ValidationErrorDetail,
 } from '@/lib/types/ml-screening'
@@ -45,10 +47,10 @@ async function fetchWithTimeout(
   })
 }
 
-async function callEndpoint(
+async function callEndpoint<T>(
   endpoint: string,
-  body: BasicScreeningRequest | ComprehensiveScreeningRequest,
-): Promise<PredictionResponse> {
+  body: BasicScreeningRequest | ComprehensiveScreeningRequest | ExplainRequest,
+): Promise<T> {
   let lastError: unknown
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
@@ -81,7 +83,7 @@ async function callEndpoint(
         )
       }
 
-      return (await res.json()) as PredictionResponse
+      return (await res.json()) as T
     } catch (err) {
       lastError = err
 
@@ -108,13 +110,32 @@ async function callEndpoint(
 }
 
 export async function predictBasic(body: BasicScreeningRequest): Promise<PredictionResponse> {
-  return callEndpoint('/predict/basic', body)
+  return callEndpoint<PredictionResponse>('/predict/basic', body)
 }
 
 export async function predictComprehensive(
   body: ComprehensiveScreeningRequest,
 ): Promise<PredictionResponse> {
-  return callEndpoint('/predict/comprehensive', body)
+  return callEndpoint<PredictionResponse>('/predict/comprehensive', body)
+}
+
+export async function explainResult(body: ExplainRequest): Promise<ExplainResponse> {
+  return callEndpoint<ExplainResponse>('/explain', body)
+}
+
+export async function fetchExplanationForPrediction(
+  result: PredictionResponse,
+): Promise<string | null> {
+  try {
+    const explain = await explainResult({
+      probability: result.probability,
+      risk_category: result.risk_category,
+    })
+    return explain.penjelasan
+  } catch (err) {
+    console.error('[ml] explain failed:', err)
+    return null
+  }
 }
 
 export async function checkMLHealth(): Promise<boolean> {

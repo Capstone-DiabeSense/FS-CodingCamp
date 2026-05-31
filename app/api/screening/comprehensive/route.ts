@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { extractBearerToken, verifyAuthToken } from '@/lib/auth-server'
 import { mapValidationErrors, getErrorMessage } from '@/lib/screening/errors'
-import { MLServiceCallError, predictComprehensive } from '@/lib/services/ml.service'
+import {
+  MLServiceCallError,
+  fetchExplanationForPrediction,
+  predictComprehensive,
+} from '@/lib/services/ml.service'
 import type { ComprehensiveScreeningRequest } from '@/lib/types/ml-screening'
 
 export async function POST(request: Request) {
@@ -24,7 +28,8 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as ComprehensiveScreeningRequest
     const result = await predictComprehensive(body)
-    return NextResponse.json(result)
+    const penjelasan = await fetchExplanationForPrediction(result)
+    return NextResponse.json({ ...result, penjelasan })
   } catch (err) {
     if (err instanceof MLServiceCallError) {
       if (err.status === 422 && err.details) {
