@@ -38,6 +38,19 @@ export interface PredictionResponse {
   disclaimer?: string
 }
 
+export interface ExplainRequest {
+  probability: number
+  risk_category: RiskCategory
+}
+
+export interface ExplainResponse {
+  penjelasan: string
+}
+
+export interface PredictionWithExplainResponse extends PredictionResponse {
+  penjelasan?: string | null
+}
+
 export interface ValidationErrorDetail {
   loc: (string | number)[]
   msg: string

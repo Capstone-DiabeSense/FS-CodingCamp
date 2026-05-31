@@ -105,3 +105,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  #screening-result-print {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  #screening-result-print .screening-result-content * {
+    color: inherit;
+  }
+}

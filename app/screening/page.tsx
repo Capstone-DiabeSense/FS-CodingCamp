@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useScreening } from '@/lib/screening-context'
 import { useAuth } from '@/lib/auth-context'
+import { buildPrefillForm } from '@/lib/screening/prefill'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,8 +42,8 @@ type ScreeningType = 'basic' | 'comprehensive' | null
 
 function ScreeningContent() {
   const router = useRouter()
-  const { addResult } = useScreening()
-  const { isLoggedIn, user } = useAuth()
+  const { addResult, results } = useScreening()
+  const { isLoggedIn, user, isLoading: authLoading } = useAuth()
   const [screeningType, setScreeningType] = useState<ScreeningType>(null)
   const [currentStep, setCurrentStep] = useState(0)
   const [formData, setFormData] = useState<ScreeningFormState>(initialFormState)
@@ -51,14 +52,9 @@ function ScreeningContent() {
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (user) {
-      setFormData(prev => ({
-        ...prev,
-        weight: user?.weight?.toString() || '',
-        height: user?.height?.toString() || '',
-      }))
-    }
-  }, [user])
+    if (authLoading || !isLoggedIn || !user) return
+    setFormData(buildPrefillForm(user, results))
+  }, [authLoading, isLoggedIn, user, results])
   const stepTitles = screeningType ? getStepTitles(screeningType) : []
   const steps = stepTitles.map((title, index) => ({
     title,
@@ -148,6 +144,7 @@ function ScreeningContent() {
         mode: data.mode ?? screeningType,
         thresholdUsed: data.threshold_used,
         disclaimer: data.disclaimer ?? DEFAULT_DISCLAIMER,
+        explanation: data.penjelasan ?? undefined,
         answers: { form: { ...formData }, payload },
       })
 
@@ -504,11 +501,11 @@ function ScreeningContent() {
             onClick={() => {
               setScreeningType(null)
               setCurrentStep(0)
-              setFormData({
-                ...initialFormState,
-                weight: user?.weight?.toString() || '',
-                height: user?.height?.toString() || '',
-              })
+              setFormData(
+                isLoggedIn && user
+                  ? buildPrefillForm(user, results)
+                  : initialFormState,
+              )
               setErrors({})
               setSubmitError(null)
             }}

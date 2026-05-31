@@ -1,22 +1,25 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
-import { useScreening } from '@/lib/screening-context'
+import { useScreening, type ScreeningResult } from '@/lib/screening-context'
+import { ScreeningResultDetail } from '@/components/screening/screening-result-detail'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { MainLayout } from '@/components/main-layout'
 import { Providers } from '@/components/providers'
-import { 
-  History, 
-  ClipboardList, 
-  AlertTriangle, 
-  CheckCircle, 
-  AlertCircle,
-  ArrowRight
-} from 'lucide-react'
+import { getRiskLabel, getRiskStyle, type RiskLevel } from '@/lib/screening/risk-styles'
+import { History, ClipboardList, ArrowRight } from 'lucide-react'
 import {
   LineChart,
   Line,
@@ -31,6 +34,7 @@ function HistoryContent() {
   const router = useRouter()
   const { isLoggedIn, isLoading } = useAuth()
   const { results } = useScreening()
+  const [selectedResult, setSelectedResult] = useState<ScreeningResult | null>(null)
 
   useEffect(() => {
     if (isLoading) return
@@ -40,44 +44,29 @@ function HistoryContent() {
   if (isLoading || !isLoggedIn) return null
 
   const getRiskIcon = (level: string) => {
-    switch (level) {
-      case 'low': return <CheckCircle className="h-5 w-5 text-green-600" />
-      case 'medium': return <AlertCircle className="h-5 w-5 text-yellow-600" />
-      case 'high': return <AlertTriangle className="h-5 w-5 text-red-600" />
-      default: return null
-    }
-  }
-
-  const getRiskLabel = (level: string) => {
-    switch (level) {
-      case 'low': return 'Rendah'
-      case 'medium': return 'Sedang'
-      case 'high': return 'Tinggi'
-      default: return level
-    }
-  }
-
-  const getRiskColor = (level: string) => {
-    switch (level) {
-      case 'low': return 'text-green-600 bg-green-50'
-      case 'medium': return 'text-yellow-600 bg-yellow-50'
-      case 'high': return 'text-red-600 bg-red-50'
-      default: return ''
-    }
+    const config = getRiskStyle(level as RiskLevel)
+    const Icon = config.icon
+    return <Icon className={`h-5 w-5 ${config.score}`} />
   }
 
   const chartData = results
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map((result) => ({
-      date: new Date(result.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
+      date: new Date(result.date).toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+      }),
       score: result.score,
-      fullDate: new Date(result.date).toLocaleDateString('id-ID', { 
-        weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+      fullDate: new Date(result.date).toLocaleDateString('id-ID', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
       }),
     }))
 
   const sortedResults = [...results].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   )
 
   if (results.length === 0) {
@@ -92,7 +81,7 @@ function HistoryContent() {
               Belum Ada Riwayat Skrining
             </h1>
             <p className="text-muted-foreground mb-6 leading-relaxed">
-              Anda belum pernah melakukan skrining. Mulai skrining pertama Anda untuk 
+              Anda belum pernah melakukan skrining. Mulai skrining pertama Anda untuk
               mengetahui risiko diabetes dan memantau perkembangannya.
             </p>
             <Link href="/screening">
@@ -134,20 +123,35 @@ function HistoryContent() {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.02 200)" />
-                      <XAxis dataKey="date" stroke="oklch(0.5 0.02 200)" fontSize={12} tickMargin={10} />
-                      <YAxis stroke="oklch(0.5 0.02 200)" fontSize={12} domain={[0, 100]} tickMargin={10} />
+                      <XAxis
+                        dataKey="date"
+                        stroke="oklch(0.5 0.02 200)"
+                        fontSize={12}
+                        tickMargin={10}
+                      />
+                      <YAxis
+                        stroke="oklch(0.5 0.02 200)"
+                        fontSize={12}
+                        domain={[0, 100]}
+                        tickMargin={10}
+                      />
                       <Tooltip
-                        contentStyle={{ 
-                          backgroundColor: 'oklch(1 0 0)', 
+                        contentStyle={{
+                          backgroundColor: 'oklch(1 0 0)',
                           border: '1px solid oklch(0.9 0.02 200)',
                           borderRadius: '8px',
-                          fontFamily: 'var(--font-mono)'
+                          fontFamily: 'var(--font-mono)',
                         }}
-                        labelFormatter={(_, payload) => payload[0]?.payload?.fullDate || ''}
+                        labelFormatter={(_, payload) =>
+                          payload[0]?.payload?.fullDate || ''
+                        }
                         formatter={(value: number) => [`Skor: ${value}`, '']}
                       />
-                      <Line 
-                        type="monotone" dataKey="score" stroke="oklch(0.55 0.15 180)" strokeWidth={3}
+                      <Line
+                        type="monotone"
+                        dataKey="score"
+                        stroke="oklch(0.55 0.15 180)"
+                        strokeWidth={3}
                         dot={{ fill: 'oklch(0.55 0.15 180)', strokeWidth: 2, r: 5 }}
                         activeDot={{ r: 8 }}
                       />
@@ -179,35 +183,49 @@ function HistoryContent() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {sortedResults.map((result) => (
-                  <div 
-                    key={result.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      {getRiskIcon(result.riskLevel)}
-                      <div>
-                        <div className="font-medium text-foreground">
-                          {new Date(result.date).toLocaleDateString('id-ID', {
-                            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-                          })}
+                {sortedResults.map((result) => {
+                  const riskStyle = getRiskStyle(result.riskLevel as RiskLevel)
+                  return (
+                    <button
+                      key={result.id}
+                      type="button"
+                      onClick={() => setSelectedResult(result)}
+                      className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors text-left cursor-pointer"
+                    >
+                      <div className="flex items-center gap-4">
+                        {getRiskIcon(result.riskLevel)}
+                        <div>
+                          <div className="font-medium text-foreground">
+                            {new Date(result.date).toLocaleDateString('id-ID', {
+                              weekday: 'long',
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                            })}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {result.type === 'comprehensive'
+                              ? 'Skrining Komprehensif'
+                              : 'Skrining Dasar'}
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {result.type === 'comprehensive' ? 'Skrining Komprehensif' : 'Skrining Dasar'}
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${riskStyle.badge}`}
+                        >
+                          Risiko {getRiskLabel(result.riskLevel)}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-foreground">
+                            {result.score}
+                          </div>
+                          <div className="text-xs text-muted-foreground font-mono">Skor</div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${getRiskColor(result.riskLevel)}`}>
-                        Risiko {getRiskLabel(result.riskLevel)}
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-foreground">{result.score}</div>
-                        <div className="text-xs text-muted-foreground font-mono">Skor</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                    </button>
+                  )
+                })}
               </div>
             </CardContent>
           </Card>
@@ -222,6 +240,37 @@ function HistoryContent() {
           </div>
         </div>
       </div>
+
+      <Dialog
+        open={selectedResult !== null}
+        onOpenChange={(open) => !open && setSelectedResult(null)}
+      >
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-xl">Detail Hasil Skrining</DialogTitle>
+            <DialogDescription>
+              {selectedResult &&
+                new Date(selectedResult.date).toLocaleDateString('id-ID', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedResult && (
+            <ScreeningResultDetail result={selectedResult} showMood />
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setSelectedResult(null)}>
+              Tutup
+            </Button>
+            <Link href="/screening">
+              <Button className="font-mono">Skrining Baru</Button>
+            </Link>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   )
 }
