@@ -260,7 +260,7 @@ function ProfileContent() {
           <div className="grid gap-4 md:grid-cols-2">
             {[
               { href: '/history', icon: History, title: 'Riwayat Skrining', desc: 'Lihat hasil skrining sebelumnya' },
-              { href: '/reminder', icon: Bell, title: 'Reminder', desc: 'Kelola pengingat skrining' },
+              { href: '/reminder', icon: Bell, title: 'Reminder', desc: 'Kelola pengingat untuk jadwal ulang skrining' },
             ].map(({ href, icon: Icon, title, desc }) => (
               <Link key={href} href={href}>
                 <Card className="cursor-pointer hover:border-primary hover:shadow-lg transition-all">
