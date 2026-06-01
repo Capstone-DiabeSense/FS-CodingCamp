@@ -1,6 +1,11 @@
+'use client'
+
 import { Activity } from 'lucide-react'
+import { useAuth } from '@/lib/auth-context'
 
 export function Footer() {
+  const { isLoggedIn } = useAuth()
+
   return (
     <footer className="border-t border-border bg-muted/30">
       <div className="container mx-auto px-4 py-12">
@@ -12,7 +17,7 @@ export function Footer() {
               <span className="font-mono text-lg font-bold text-primary">DiabeSense</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Aplikasi skrining risiko diabetes yang mudah, cepat, dan akurat untuk membantu Anda menjaga kesehatan.
+              Aplikasi skrining risiko diabetes yang mudah dan cepat untuk membantu Anda menjaga kesehatan.
             </p>
           </div>
 
@@ -26,9 +31,20 @@ export function Footer() {
               <li>
                 <a href="/screening" className="hover:text-primary transition-colors">Skrining</a>
               </li>
-              <li>
-                <a href="/login" className="hover:text-primary transition-colors">Login</a>
-              </li>
+              {isLoggedIn ? (
+                <>
+                  <li>
+                    <a href="/history" className="hover:text-primary transition-colors">Riwayat</a>
+                  </li>
+                  <li>
+                    <a href="/profile" className="hover:text-primary transition-colors">Profile</a>
+                  </li>
+                </>
+              ) : (
+                <li>
+                  <a href="/login" className="hover:text-primary transition-colors">Login</a>
+                </li>
+              )}
             </ul>
           </div>
 
@@ -39,7 +55,7 @@ export function Footer() {
               Dikembangkan oleh tim yang peduli dengan kesehatan masyarakat Indonesia.
             </p>
             <p className="text-xs text-muted-foreground">
-              Dibuat dengan penuh dedikasi untuk kesehatan Anda.
+              CC26-PSU357
             </p>
           </div>
         </div>
