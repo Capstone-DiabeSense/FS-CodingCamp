@@ -28,7 +28,7 @@ export function ScreeningResultDetail({
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card className={riskConfig.card}>
         <CardHeader className="text-center pb-4">
           <div
@@ -136,9 +136,9 @@ export function ScreeningResultDetail({
 
       {showDisclaimer && (
         <Card className="bg-muted/30">
-          <CardContent className="pt-6">
+          <CardContent className="pt-1">
             <div className="flex gap-4">
-              <AlertCircle className="h-6 w-6 shrink-0 text-muted-foreground" />
+              <AlertCircle className="h- w-6 shrink-0 text-muted-foreground" />
               <div>
                 <h4 className="font-medium text-foreground mb-1">Disclaimer</h4>
                 <p className="text-sm text-muted-foreground leading-relaxed">
