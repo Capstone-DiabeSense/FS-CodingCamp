@@ -133,7 +133,7 @@ function DashboardContent() {
                 </Button>
               </Link>
               <a
-                href="https://example.com/dashboard-analitik"
+                href="https://diabesense-dashboard.streamlit.app/#insight-komorbiditas-klinis"
                 target="_blank"
                 rel="noopener noreferrer"
               >
