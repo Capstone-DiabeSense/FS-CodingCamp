@@ -21,8 +21,6 @@ import {
   ExternalLink
 } from 'lucide-react'
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -35,28 +33,28 @@ import {
   Cell,
 } from 'recharts'
 
-// Dummy data for statistics charts
-const trendData = [
-  { month: 'Jan', cases: 4200 },
-  { month: 'Feb', cases: 4500 },
-  { month: 'Mar', cases: 4300 },
-  { month: 'Apr', cases: 4800 },
-  { month: 'Mei', cases: 5100 },
-  { month: 'Jun', cases: 5400 },
-]
-
+// Data from DiabeSense Analytics Dashboard
 const ageDistribution = [
-  { age: '18-30', count: 15 },
-  { age: '31-40', count: 25 },
-  { age: '41-50', count: 35 },
-  { age: '51-60', count: 20 },
-  { age: '60+', count: 5 },
+  { age: '18-30', count: 9.2 },
+  { age: '31-40', count: 19.4 },
+  { age: '41-50', count: 34.2 },
+  { age: '51-60', count: 47.5 },
+  { age: '61-70', count: 58.6 },
+  { age: '71+',   count: 62.3 },
 ]
 
 const riskDistribution = [
-  { name: 'Rendah', value: 45, color: 'oklch(0.6 0.18 145)' },
-  { name: 'Sedang', value: 35, color: 'oklch(0.75 0.18 85)' },
-  { name: 'Tinggi', value: 20, color: 'oklch(0.55 0.2 25)' },
+  { name: 'Non-Diabetes', value: 50, color: 'oklch(0.6 0.18 145)' },
+  { name: 'Diabetes',     value: 50, color: 'oklch(0.55 0.2 25)' },
+]
+
+const comorbiditiesData = [
+  { factor: 'Hipertensi',        value: 75.3 },
+  { factor: 'Kolesterol Tinggi', value: 67.0 },
+  { factor: 'Aktif Fisik',       value: 63.1 },
+  { factor: 'Perokok',           value: 51.8 },
+  { factor: 'Penyakit Jantung',  value: 22.3 },
+  { factor: 'Stroke',            value: 9.2  },
 ]
 
 function DashboardContent() {
@@ -133,7 +131,7 @@ function DashboardContent() {
                 </Button>
               </Link>
               <a
-                href="https://example.com/dashboard-analitik"
+                href="https://diabesense-dashboard.streamlit.app/#insight-komorbiditas-klinis"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -199,119 +197,109 @@ function DashboardContent() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
-            {/* Trend Chart */}
+            {/* Komorbiditas Bar Chart — lg:col-span-2 */}
             <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle className="font-serif">Tren Kasus Diabetes (Ribu)</CardTitle>
-                <CardDescription>Perkembangan jumlah kasus dalam 6 bulan terakhir</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={trendData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.02 200)" />
-                      <XAxis dataKey="month" stroke="oklch(0.5 0.02 200)" fontSize={12} />
-                      <YAxis stroke="oklch(0.5 0.02 200)" fontSize={12} />
-                      <Tooltip
+                <CardTitle className="font-serif">Faktor Komorbiditas pada Penderita Diabetes</CardTitle>
+                <CardDescription>Persentase faktor risiko yang ditemukan pada penderita diabetes (%)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={comorbiditiesData} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.02 200)" />
+                        <XAxis type="number" domain={[0, 100]} stroke="oklch(0.5 0.02 200)" fontSize={12} unit="%" />
+                        <YAxis type="category" dataKey="factor" stroke="oklch(0.5 0.02 200)" fontSize={11} width={120} />
+                        <Tooltip
                         contentStyle={{
                           backgroundColor: 'oklch(1 0 0)',
                           border: '1px solid oklch(0.9 0.02 200)',
                           borderRadius: '8px',
                           fontFamily: 'var(--font-mono)'
                         }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="cases"
-                        stroke="oklch(0.55 0.15 180)"
-                        strokeWidth={3}
-                        dot={{ fill: 'oklch(0.55 0.15 180)', strokeWidth: 2 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Risk Distribution Pie Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-serif">Distribusi Risiko</CardTitle>
-                <CardDescription>Berdasarkan hasil skrining</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={riskDistribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {riskDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'oklch(1 0 0)',
-                          border: '1px solid oklch(0.9 0.02 200)',
-                          borderRadius: '8px',
-                          fontFamily: 'var(--font-mono)'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex justify-center gap-4 mt-4">
-                  {riskDistribution.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <div
-                        className="h-3 w-3 rounded-full"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-xs text-muted-foreground font-mono">{item.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Age Distribution Bar Chart */}
-            <Card className="lg:col-span-3">
-              <CardHeader>
-                <CardTitle className="font-serif">Distribusi Usia Penderita (%)</CardTitle>
-                <CardDescription>Persentase penderita diabetes berdasarkan kelompok usia</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={ageDistribution}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.02 200)" />
-                      <XAxis dataKey="age" stroke="oklch(0.5 0.02 200)" fontSize={12} />
-                      <YAxis stroke="oklch(0.5 0.02 200)" fontSize={12} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'oklch(1 0 0)',
-                          border: '1px solid oklch(0.9 0.02 200)',
-                          borderRadius: '8px',
-                          fontFamily: 'var(--font-mono)'
-                        }}
-                      />
-                      <Bar
-                        dataKey="count"
-                        fill="oklch(0.55 0.15 180)"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+                        formatter={(value) => [`${value}%`, 'Persentase']}
+                        />
+                        <Bar dataKey="value" fill="oklch(0.55 0.15 180)" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                        </ResponsiveContainer>
+                        </div>
+                        </CardContent>
+                        </Card>
+                        
+                        {/* Risk Distribution Pie Chart */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="font-serif">Distribusi Dataset</CardTitle>
+                            <CardDescription>Komposisi data skrining (n=70.692)</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="h-64">
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <PieChart>
+                                    <Pie
+                                    data={riskDistribution}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={50}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                    >
+                                      {riskDistribution.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                        </Pie>
+                                        <Tooltip
+                                        contentStyle={{
+                                          backgroundColor: 'oklch(1 0 0)',
+                                          border: '1px solid oklch(0.9 0.02 200)',
+                                          borderRadius: '8px',
+                                          fontFamily: 'var(--font-mono)'
+                                        }}
+                                        formatter={(value) => [`${value}%`, '']}
+                                      />
+                                    </PieChart>
+                                  </ResponsiveContainer>
+                                </div>
+                                <div className="flex justify-center gap-4 mt-4">
+                                  {riskDistribution.map((item, index) => (
+                                    <div key={index} className="flex items-center gap-2">
+                                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
+                                      <span className="text-xs text-muted-foreground font-mono">{item.name}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </CardContent>
+                            </Card>
+                            
+                            {/* Age Distribution Bar Chart */}
+                            <Card className="lg:col-span-3">
+                              <CardHeader>
+                                <CardTitle className="font-serif">Risiko Diabetes per Kelompok Usia (%)</CardTitle>
+                                <CardDescription>Persentase risiko diabetes berdasarkan kelompok usia (n=70.692)</CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="h-64">
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={ageDistribution}>
+                                      <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.02 200)" />
+                                      <XAxis dataKey="age" stroke="oklch(0.5 0.02 200)" fontSize={12} />
+                                      <YAxis stroke="oklch(0.5 0.02 200)" fontSize={12} unit="%" domain={[0, 100]} />
+                                      <Tooltip
+                                        contentStyle={{
+                                          backgroundColor: 'oklch(1 0 0)',
+                                          border: '1px solid oklch(0.9 0.02 200)',
+                                          borderRadius: '8px',
+                                          fontFamily: 'var(--font-mono)'
+                                        }}
+                                        formatter={(value) => [`${value}%`, 'Risiko Diabetes']}
+                                      />
+                                      <Bar dataKey="count" fill="oklch(0.55 0.15 180)" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                  </ResponsiveContainer>
+                                </div>
+                              </CardContent>
+                            </Card>
           </div>
         </div>
       </section>
